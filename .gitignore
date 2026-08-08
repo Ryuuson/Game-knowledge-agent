@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+agent_memory.sqlite
+agent_memory.sqlite-shm
+agent_memory.sqlite-wal
+knowledge_index.sqlite
+data/*
+!data/game_knowledge_chunks.jsonl
+!data/new_knowledge_chunks.jsonl
