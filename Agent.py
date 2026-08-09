@@ -9,6 +9,7 @@ import sqlite3
 import requests
 import base64
 import mimetypes
+from threading import Lock
 
 from pathlib import Path
 from typing import Annotated, Literal
@@ -53,12 +54,11 @@ model = ChatOpenAI(
 )
 
 # 视觉模型：仅用于 ocr_image，与主 Agent 模型解耦。
-# 当前 ARK_MODEL 支持文本+视觉，默认回落到 ARK_MODEL，行为不变；
-# 将来换成纯文本 LLM 时，把原视觉模型通过 ARK_VISION_MODEL 单独配置即可，OCR 不受影响。
+# 优先使用 VISION_*；为兼容已有配置，未填写时才复用 Ark 视觉/主模型。
 vision_model = ChatOpenAI(
-    model=os.getenv("VISION_MODEL") or os.getenv("ARK_VISION_MODEL") or LLM_MODEL,
-    api_key=os.getenv("VISION_API_KEY") or LLM_API_KEY,
-    base_url=os.getenv("VISION_BASE_URL") or LLM_BASE_URL,
+    model=os.getenv("VISION_MODEL") or os.getenv("ARK_VISION_MODEL") or os.getenv("ARK_MODEL") or LLM_MODEL,
+    api_key=os.getenv("VISION_API_KEY") or os.getenv("ARK_API_KEY") or LLM_API_KEY,
+    base_url=os.getenv("VISION_BASE_URL") or os.getenv("ARK_BASE_URL") or LLM_BASE_URL,
     temperature=0,
     timeout=120,
 )
@@ -71,6 +71,33 @@ TEXT_SUFFIXES = {".md", ".txt"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_READ_SIZE = 100 * 1024  # read_document 单次全文读取上限，超大文件用 read_document_section 分段
 MAX_IMAGE_SIZE = 4 * 1024 * 1024  # ocr_image 单张图片上限；base64 后约 5.3 MB，需留足模型输入余量
+
+LOCAL_DOCUMENT_ROOTS = {
+    "game_design_wiki": "game-design-wiki",
+    "game_num_basics": "Game_Num_Basics_And_Calc",
+    "senior_game_designer": "senior-game-designer",
+    "gamedev_at_home": "gamedev_at_home",
+}
+
+
+def _local_knowledge_path(hit: dict) -> str | None:
+    """Translate a chunk source identifier into a safe readable local path."""
+    collection = str(hit.get("collection_label", ""))
+    source = str(hit.get("source_url", ""))
+    root_name = LOCAL_DOCUMENT_ROOTS.get(collection)
+    prefix = f"{collection}/"
+    if not root_name or not source.startswith(prefix):
+        return None
+
+    relative_path = Path(source.removeprefix(prefix))
+    candidate = Path(root_name) / relative_path
+    resolved = (KNOWLEDGE_DIR / candidate).resolve()
+    if (
+        not resolved.is_relative_to(KNOWLEDGE_DIR.resolve())
+        or resolved.suffix.lower() not in TEXT_SUFFIXES
+    ):
+        return None
+    return candidate.as_posix()
 
 # ---------- 语义检索（RAG）相关 ----------
 RAG_BACKEND = os.getenv("RAG_BACKEND", "bge").lower()
@@ -97,6 +124,8 @@ else:
 # 因为 Agent 是长运行进程，工具会被多次调用，不能每次重新加载模型/打开库。
 _cached_embedder = None
 _cached_index = None
+_embedder_lock = Lock()
+_index_lock = Lock()
 
 
 def classify_game_retrieval(score: float) -> str:
@@ -125,39 +154,48 @@ def _get_embedder():
     """懒加载当前检索后端的 embedding 客户端。"""
 
     global _cached_embedder
-    if _cached_embedder is None:
-        if RAG_BACKEND == "bge":
-            from sentence_transformers import SentenceTransformer
+    if _cached_embedder is not None:
+        return _cached_embedder
 
-            _cached_embedder = SentenceTransformer(BGE_EMBEDDING_MODEL, local_files_only=True)
-            return _cached_embedder
+    with _embedder_lock:
+        if _cached_embedder is None:
+            if RAG_BACKEND == "bge":
+                from sentence_transformers import SentenceTransformer
 
-        from wiki_corpus.ark_multimodal_embeddings import ArkMultimodalTextEmbedder
+                _cached_embedder = SentenceTransformer(
+                    BGE_EMBEDDING_MODEL, local_files_only=True
+                )
+            else:
+                from wiki_corpus.ark_multimodal_embeddings import ArkMultimodalTextEmbedder
 
-        api_key = os.getenv("ARK_API_KEY")
-        if not api_key:
-            raise RuntimeError("未配置 ARK_API_KEY，无法执行 Ark 语义检索。")
-        _cached_embedder = ArkMultimodalTextEmbedder(
-            api_key=api_key,
-            model=ARK_EMBEDDING_MODEL,
-            base_url=os.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
-        )
+                api_key = os.getenv("ARK_API_KEY")
+                if not api_key:
+                    raise RuntimeError("未配置 ARK_API_KEY，无法执行 Ark 语义检索。")
+                _cached_embedder = ArkMultimodalTextEmbedder(
+                    api_key=api_key,
+                    model=ARK_EMBEDDING_MODEL,
+                    base_url=os.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+                )
     return _cached_embedder
 
 
 def _get_index():
     """懒加载游戏知识索引，并在进程内缓存。"""
     global _cached_index
-    if _cached_index is None:
-        if not GAME_INDEX_PATH.is_file():
-            return None
-        connection = sqlite3.connect(
-            f"file:{GAME_INDEX_PATH.as_posix()}?mode=ro", uri=True
-        )
-        try:
-            _cached_index = load_index(connection)
-        finally:
-            connection.close()
+    if _cached_index is not None:
+        return _cached_index
+
+    with _index_lock:
+        if _cached_index is None:
+            if not GAME_INDEX_PATH.is_file():
+                return None
+            connection = sqlite3.connect(
+                f"file:{GAME_INDEX_PATH.as_posix()}?mode=ro", uri=True
+            )
+            try:
+                _cached_index = load_index(connection)
+            finally:
+                connection.close()
     return _cached_index
 
 def _resolve_knowledge_path(filename: str) -> Path:
@@ -297,9 +335,11 @@ def _search_index(query: str, top_k: int) -> str:
         title = hit.get("title", "未知标题")
         section = hit.get("section_path") or "文章开头"
         collection = hit.get("collection_label") or "game_knowledge"
+        local_path = _local_knowledge_path(hit)
+        readable_path = f"\n可读取文件：{local_path}" if local_path else ""
         results.append(
             f"[{position}] 相似度={score:.3f} 来源集合：{collection}\n"
-            f"标题：{title}\n章节：{section}\n来源：{source}\n{text}"
+            f"标题：{title}\n章节：{section}\n来源：{source}{readable_path}\n{text}"
         )
 
     return "\n\n".join(results)
@@ -548,6 +588,8 @@ SYSTEM_PROMPT = """
 - 外包质量、排期、难度、留存、交互等是跨行业共用词且没有给出游戏上下文时，先澄清领域，不要直接联网给通用方案。
 - 只根据工具返回的资料回答；资料中没有的信息，明确说明没有找到，不要编造。
 - 使用本地游戏知识库回答时，直接陈述结论，不要向用户展示标题、章节、来源集合、文件路径或链接。
+- 工具调用属于内部过程。决定调用工具时，直接调用，不要先输出“我来检索”“我来读取”“知识库中有……”等过程说明；工具完成后只输出面向用户的最终回答。
+- 检索结果中的“可读取文件”才是 read_document / read_document_section 可使用的文件名；“来源”只用于识别资料，不得当作本地文件路径。
 
 其他规则：
 - 只有用户明确要求“保存”“写入”或“创建笔记”时，才调用 save_note。

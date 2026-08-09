@@ -123,9 +123,10 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
     with st.chat_message("assistant"):
         reply_box = st.empty()
         status_box = st.empty()
-        full_text = ""
+        pending_text = ""
         shown_tool_calls = set()
         active_tool_calls = {}
+        tool_turn_in_progress = False
 
         # 流式执行
         for chunk, metadata in graph.stream(
@@ -139,6 +140,9 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
                     tc_id = tc.get("id")
                     tc_name = tc.get("name", "")
                     if tc_id and tc_id not in shown_tool_calls:
+                        # 工具调用前的自然语言前言属于内部过程，不纳入最终回复。
+                        pending_text = ""
+                        tool_turn_in_progress = True
                         shown_tool_calls.add(tc_id)
                         active_tool_calls[tc_id] = tc_name or "未知"
                         start_msg = TOOL_START_MSGS.get(tc_name, DEFAULT_START)
@@ -151,15 +155,21 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
                     tool_name = active_tool_calls.pop(tc_id)
                     end_msg = TOOL_END_MSGS.get(tool_name, DEFAULT_END)
                     status_box.success(f"✨ {end_msg}")
+                if not active_tool_calls:
+                    tool_turn_in_progress = False
 
-            # 收集模型文本；结束后统一脱敏再显示。
-            if isinstance(chunk, AIMessageChunk) and chunk.content:
-                full_text += chunk.content
+            # 只保留最终助手回合；一旦检测到工具调用，上方会丢弃该回合文本。
+            if (
+                isinstance(chunk, AIMessageChunk)
+                and chunk.content
+                and not tool_turn_in_progress
+            ):
+                pending_text += chunk.content
 
         # 模型若意外复述内部摘要，绝不把它显示或保存到聊天记录。
         stored_summary = conversation_store.get_summary(st.session_state.thread_id)
         summary_text = stored_summary.summary if stored_summary else ""
-        full_text = remove_internal_summary(full_text, summary_text)
+        full_text = remove_internal_summary(pending_text, summary_text)
         reply_box.markdown(full_text)
         status_box.empty()  # 清除工具状态
         if stored_summary and stored_summary.covered_message_count > covered_before:

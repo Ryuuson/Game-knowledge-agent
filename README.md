@@ -73,7 +73,7 @@ LLM_MODEL=your_chat_model
 | `METASO_API_KEY` | 否 | 当前内置联网搜索适配器的凭据 |
 | `VISION_*` | 否 | 为图片文字识别指定单独的视觉模型 |
 
-聊天模型使用 OpenAI-compatible 接口；`LLM_*` 和旧的 `ARK_*` 同时存在时，优先读取 `LLM_*`。
+聊天模型通过 `LLM_*` 配置，接口需兼容 OpenAI Chat Completions。若 OCR 使用单独的视觉模型，可配置 `VISION_*`。
 
 ## 知识库
 
