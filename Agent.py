@@ -362,6 +362,11 @@ def save_note(content: str) -> str:
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_path = NOTES_DIR / f"{timestamp}.md"
+    # 同秒内多次保存时追加序号，避免静默覆盖上一条笔记。
+    suffix = 2
+    while file_path.exists():
+        file_path = NOTES_DIR / f"{timestamp}-{suffix}.md"
+        suffix += 1
 
     file_path.write_text(content, encoding="utf-8")
     return f"已保存笔记：{file_path.name}"
@@ -573,7 +578,7 @@ SYSTEM_PROMPT = """
 
 【本地数据源，优先使用游戏知识库】
 1. 游戏设计、游戏机制、数值平衡、游戏制作流程、游戏 AI 问题
-   → 用 search_game_knowledge 查“游戏设计知识库”。它包括 game-design-wiki 和 Game-Knowledge-Base 两个来源。
+   → 用 search_game_knowledge 查“游戏设计知识库”。它汇集 game-design-wiki、Game-Knowledge-Base、open-game-mechanics-dataset、Game_Num_Basics_And_Calc、gamedev_at_home 和 senior-game-designer 六个公开来源。
    → 用户用“这个”“那个”“它”“这里”等模糊指代，或问题表述不完整但可能在问游戏知识时，也先检索该库，不要因为未出现准确术语就跳过检索。
    → 工具返回“检索状态：待确认”时：若问题或历史明确是游戏语境，才用证据回答；若明确是建筑、金融等非游戏行业，不得套用游戏资料，应改用联网或说明不适用；若行业不明确，先用一句话澄清“你指的是游戏项目中的……吗？”。
 2. 个人学习资料（knowledge 目录：离散数学、嵌入式、AI 笔记等）

@@ -9,3 +9,10 @@ knowledge_index.sqlite
 data/*
 !data/game_knowledge_chunks.jsonl
 !data/new_knowledge_chunks.jsonl
+
+# Local material kept outside the minimal public Agent release.
+archive/
+docs/
+knowledge/
+sanguosha_balance_agent/
+tests/
