@@ -27,7 +27,7 @@ flowchart LR
     W --> L
 ```
 
-默认检索会用本地 BGE 模型把问题和知识块编码后，取语义最接近的片段作为回答依据。相似度不足时不会把不相关的游戏资料硬套到问题上；处在边界的结果会结合问题的游戏语境再判断。
+默认检索会用本地 BGE 模型做语义召回，并用 BM25 补足精确术语、公式名和专有名词的召回；两路候选通过 reciprocal-rank fusion (RRF) 合并排序。最终证据仍必须达到原有 BGE 相似度下限，因此关键词命中不会绕过游戏领域相关性保护。每次检索的证据会按知识块去重，并受总字符预算限制。相似度不足时不会把不相关的游戏资料硬套到问题上；处在边界的结果会结合问题的游戏语境再判断。
 
 对话会保存在本机，也可以在界面中切换旧会话。会话过长时，早期内容会压缩成摘要供模型继续理解上下文，原始记录仍保留在本地。
 
@@ -70,6 +70,10 @@ LLM_MODEL=your_chat_model
 | `LLM_BASE_URL` | 是 | OpenAI-compatible 接口地址 |
 | `LLM_MODEL` | 是 | 聊天模型名称 |
 | `RAG_BACKEND=bge` | 否 | 默认值。本地 BGE 检索，不需要 embedding API |
+| `RAG_DENSE_CANDIDATES` / `RAG_LEXICAL_CANDIDATES` | 否 | 两路召回的候选数，默认各 20 |
+| `RAG_RRF_K` | 否 | RRF 融合常数，默认 60 |
+| `RAG_DENSE_RRF_WEIGHT` / `RAG_LEXICAL_RRF_WEIGHT` | 否 | BGE 与 BM25 的融合权重，默认 `1.0 / 0.25`，保持语义排序主导 |
+| `RAG_EVIDENCE_CHAR_BUDGET` | 否 | 单次传给对话模型的检索证据总字符上限，默认 9,000 |
 | `METASO_API_KEY` | 否 | 当前内置联网搜索适配器的凭据 |
 | `VISION_*` | 否 | 为图片文字识别指定单独的视觉模型 |
 
@@ -98,6 +102,18 @@ LLM_MODEL=your_chat_model
 不要混用不同 embedding 模型生成的索引和查询编码器。索引必须由当前查询使用的同一模型生成；模型不同，向量空间不同，混用不会得到可靠结果。
 
 当前查询是进程内全量余弦扫描：首次加载时把全部向量读入内存并缓存，之后每次查询对全量向量做一次矩阵相似度计算。6,515 块规模下没有问题；若语料预计超过约 10 万知识块（或单次检索延迟不再可接受），再改用 ANN 索引（如 FAISS / HNSW），在此之前不需要引入额外依赖。
+
+### 检索评测
+
+`scripts/evaluate_rag.py` 用同一份本地索引比较纯 BGE 与混合检索在不同阈值下的路由行为。题集必须提供 `id`、`question` 和可选的 `type` 字段，可使用 JSONL、包含 `results` 的 JSON，或包含 `cases` 的金标 JSON：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate_rag.py .\evals\routing_cases.jsonl --output .\data\rag-routing-report.json
+```
+
+报告统计每个 `type` 的高相关、待确认和拒绝比例，并保留每题标题，便于人工抽检。它不等于召回正确率或回答质量；调整阈值前，仍应对正例命中是否真的支持问题、负例是否被错误放行进行人工审阅。
+
+`evals/rag_hybrid_regression_v1.json` 是已人工审阅的回归集。它用“证据组”表达某个问题必须覆盖的知识，而非固定某一条绝对排名；报告中的 `expectation_evaluation` 会显示 BGE 和混合检索各自的通过数与失败项。
 
 ## 本地与联网
 

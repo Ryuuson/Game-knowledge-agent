@@ -32,6 +32,7 @@ from conversation_context import (
 )
 from conversation_store import ConversationStore
 from wiki_corpus.domain_signals import classify_query_domain
+from wiki_corpus.hybrid_search import BM25Index, rank_hybrid
 from wiki_corpus.vector_search import load_index, rank_chunks
 
 load_dotenv()
@@ -104,8 +105,18 @@ RAG_BACKEND = os.getenv("RAG_BACKEND", "bge").lower()
 ARK_INDEX_PATH = Path(__file__).parent / "data" / "game_knowledge_combined_index.sqlite"
 BGE_INDEX_PATH = Path(__file__).parent / "data" / "game_knowledge_bge_combined_index.sqlite"
 SEMANTIC_TOP_K = 3
+RAG_DENSE_CANDIDATES = int(os.getenv("RAG_DENSE_CANDIDATES", "20"))
+RAG_LEXICAL_CANDIDATES = int(os.getenv("RAG_LEXICAL_CANDIDATES", "20"))
+RAG_RRF_K = int(os.getenv("RAG_RRF_K", "60"))
+RAG_DENSE_RRF_WEIGHT = float(os.getenv("RAG_DENSE_RRF_WEIGHT", "1.0"))
+RAG_LEXICAL_RRF_WEIGHT = float(os.getenv("RAG_LEXICAL_RRF_WEIGHT", "0.25"))
+RAG_EVIDENCE_CHAR_BUDGET = int(os.getenv("RAG_EVIDENCE_CHAR_BUDGET", "9000"))
 ARK_EMBEDDING_MODEL = os.getenv("ARK_EMBEDDING_MODEL", "ep-20260805175555-j5hff")
 BGE_EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
+if min(RAG_DENSE_CANDIDATES, RAG_LEXICAL_CANDIDATES, RAG_RRF_K, RAG_EVIDENCE_CHAR_BUDGET) <= 0:
+    raise ValueError("RAG 候选数、RRF 参数和证据字符预算必须大于零")
+if RAG_DENSE_RRF_WEIGHT <= 0 or RAG_LEXICAL_RRF_WEIGHT <= 0:
+    raise ValueError("RRF 通道权重必须大于零")
 if RAG_BACKEND == "ark":
     GAME_INDEX_PATH = ARK_INDEX_PATH
     EXPECTED_INDEX_MODEL = f"ark:{ARK_EMBEDDING_MODEL}"
@@ -124,8 +135,10 @@ else:
 # 因为 Agent 是长运行进程，工具会被多次调用，不能每次重新加载模型/打开库。
 _cached_embedder = None
 _cached_index = None
+_cached_lexical_index = None
 _embedder_lock = Lock()
 _index_lock = Lock()
+_lexical_index_lock = Lock()
 
 
 def classify_game_retrieval(score: float) -> str:
@@ -197,6 +210,18 @@ def _get_index():
             finally:
                 connection.close()
     return _cached_index
+
+
+def _get_lexical_index(chunks: list[dict]) -> BM25Index:
+    """Build the small in-memory lexical index once per Agent process."""
+    global _cached_lexical_index
+    if _cached_lexical_index is not None:
+        return _cached_lexical_index
+
+    with _lexical_index_lock:
+        if _cached_lexical_index is None:
+            _cached_lexical_index = BM25Index(chunks)
+    return _cached_lexical_index
 
 def _resolve_knowledge_path(filename: str) -> Path:
     """安全地解析 knowledge 目录下的文件路径，禁止路径穿越。"""
@@ -281,10 +306,12 @@ def search_documents(query: str) -> str:
 
 
 def _search_index(query: str, top_k: int) -> str:
-    """执行游戏知识库的向量检索。"""
+    """执行带 BM25 补充召回的本地混合检索。"""
     query = query.strip()
     if not query:
         return "查询内容不能为空。"
+    if top_k <= 0:
+        return "返回条数必须大于零。"
 
     domain_response = _domain_signal_response(query)
     if domain_response:
@@ -315,30 +342,53 @@ def _search_index(query: str, top_k: int) -> str:
     except Exception as error:
         return f"语义检索编码失败：{error}"
 
-    hits = rank_chunks(query_vector, chunks, vectors, top_k=top_k)
-    # 过滤掉低于下限的结果，并把边界结果交给外层 LLM 结合语境判断。
-    hits = [hit for hit in hits if hit.get("score", 0.0) >= SEMANTIC_THRESHOLD]
+    dense_candidate_count = max(top_k, RAG_DENSE_CANDIDATES)
+    lexical_candidate_count = max(top_k, RAG_LEXICAL_CANDIDATES)
+    # BM25 only adjusts the order of semantically relevant candidates. A lexical-only
+    # match cannot bypass the existing dense relevance threshold or domain guard.
+    fused_hits = rank_hybrid(
+        query,
+        query_vector,
+        chunks,
+        vectors,
+        _get_lexical_index(chunks),
+        dense_candidates=dense_candidate_count,
+        lexical_candidates=lexical_candidate_count,
+        rrf_k=RAG_RRF_K,
+        dense_weight=RAG_DENSE_RRF_WEIGHT,
+        lexical_weight=RAG_LEXICAL_RRF_WEIGHT,
+    )
+    hits = [hit for hit in fused_hits if hit.get("score", 0.0) >= SEMANTIC_THRESHOLD][:top_k]
     if not hits:
         return f"知识库中没有与“{query}”相关的内容。"
 
-    confidence = classify_game_retrieval(float(hits[0]["score"]))
+    confidence = classify_game_retrieval(max(float(hit["score"]) for hit in hits))
     if confidence == "ambiguous":
         results = [
             "检索状态：待确认。候选内容与问题相近，但请先根据用户问题和会话上下文确认是否明确在问游戏领域；不要把游戏资料直接用于其他行业。"
         ]
     else:
         results = ["检索状态：高相关。可基于以下游戏知识回答。"]
+    remaining_evidence_chars = RAG_EVIDENCE_CHAR_BUDGET
     for position, hit in enumerate(hits, start=1):
+        if remaining_evidence_chars <= 0:
+            break
         source = hit.get("source_url") or hit.get("title", "未知来源")
         score = hit.get("score", 0.0)
+        rrf_score = hit.get("rrf_score", 0.0)
         text = hit.get("text", "").strip()
+        if len(text) > remaining_evidence_chars:
+            truncation_marker = "\n[片段因证据总长度预算而截断]"
+            text_limit = max(0, remaining_evidence_chars - len(truncation_marker))
+            text = f"{text[:text_limit].rstrip()}{truncation_marker}"
+        remaining_evidence_chars -= len(text)
         title = hit.get("title", "未知标题")
         section = hit.get("section_path") or "文章开头"
         collection = hit.get("collection_label") or "game_knowledge"
         local_path = _local_knowledge_path(hit)
         readable_path = f"\n可读取文件：{local_path}" if local_path else ""
         results.append(
-            f"[{position}] 相似度={score:.3f} 来源集合：{collection}\n"
+            f"[{position}] 语义相似度={score:.3f} 融合分={rrf_score:.4f} 来源集合：{collection}\n"
             f"标题：{title}\n章节：{section}\n来源：{source}{readable_path}\n{text}"
         )
 

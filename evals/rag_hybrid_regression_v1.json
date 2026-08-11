@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "description": "Reviewed regression set for local game-knowledge retrieval. Evidence groups are alternatives, not an exact ranking contract.",
+  "cases": [
+    {
+      "id": "review-a-01",
+      "type": "game_related",
+      "question": "我们做的是Roguelike卡牌，但玩家总说抽牌太看脸，有没有办法在不破坏随机感的前提下让每局体验更稳定？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "随机性管理", "acceptable": [{"title": "Roguelike_Perks"}, {"title": "Roguelike_Deckbuilder_Knowledge_Map"}]}]
+      }
+    },
+    {
+      "id": "review-a-03",
+      "type": "game_related",
+      "question": "BOSS二阶段换攻击模式后，很多玩家直接暴毙，该给预警动画还是调数值更管用？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "攻击预警与数值压力", "acceptable": [{"title": "Industry_CaseStudies"}, {"title": "Boss_Design_Philosophy"}]}]
+      }
+    },
+    {
+      "id": "review-a-07",
+      "type": "game_related",
+      "question": "剧情演出和战斗节奏经常打架，玩家刚燃起来就被对话打断，叙事和可玩性怎么排优先级？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "叙事密度", "acceptable": [{"title": "Game_Narrative_And_Presentation"}]}]
+      }
+    },
+    {
+      "id": "review-a-11",
+      "type": "game_related",
+      "question": "外包来的角色模型风格不统一，进游戏像大杂烩，但返工成本太高，怎么在引擎里后期补救？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "引擎内修复案例", "acceptable": [{"title": "典型事故排雷手册"}]}]
+      }
+    },
+    {
+      "id": "review-a-17",
+      "type": "game_related",
+      "question": "Boss战设计了三阶段，但测试时大部分玩家连一阶段都过不去，是我们太难还是他们太菜？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "Boss公平性与测试", "acceptable": [{"title": "Boss_Design_Philosophy"}, {"title": "Beta_Testing_Guide"}]}]
+      }
+    },
+    {
+      "id": "review-b-11",
+      "type": "game_related",
+      "question": "怪物AI总是卡在墙角或者绕路，是寻路问题还是行为树设计问题？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "寻路诊断", "acceptable": [{"title": "Terrain_3D_vs_2D_Analysis"}]},
+          {"name": "行为树诊断", "acceptable": [{"title": "决策架构选型"}]}
+        ]
+      }
+    },
+    {
+      "id": "review-b-12",
+      "type": "game_related",
+      "question": "角色原画和3D模型还原度不够，是管线问题还是外包沟通问题？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "角色管线", "acceptable": [{"title": "2D 角色全链路制作管线总览"}]},
+          {"name": "协作沟通", "acceptable": [{"title": "跨部门沟通话术模板 — 7 大场景"}]}
+        ]
+      }
+    },
+    {
+      "id": "review-b-13",
+      "type": "game_related",
+      "question": "原型验证阶段怎么快速判断一个核心玩法有没有前途？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "核心玩法原型", "acceptable": [{"title": "原型设计", "section_contains": "应用"}, {"title": "原型设计", "section_contains": "八种原型"}]}]
+      }
+    },
+    {
+      "id": "review-b-14",
+      "type": "game_related",
+      "question": "程序化生成关卡怎么保证不会产出那种走不通的死路？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "可解性保障", "acceptable": [{"title": "程序化生成", "section_contains": "益智关卡自动生成"}, {"title": "程序化生成", "section_contains": "逆向模拟"}]}]
+      }
+    },
+    {
+      "id": "review-b-15",
+      "type": "game_related",
+      "question": "多人协作任务里总有玩家挂机，除了惩罚机制还有什么设计思路？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "正向协作激励", "acceptable": [{"title": "机制设计"}, {"title": "Coop_Balance_Design"}]}]
+      }
+    },
+    {
+      "id": "review-b-16",
+      "type": "game_related",
+      "question": "经济系统里金币产出和消耗曲线怎么设计才能避免通货膨胀？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "产消反推", "acceptable": [{"title": "成长曲线设计", "section_contains": "具体例子"}]},
+          {"name": "经济水龙头与回收", "acceptable": [{"title": "Economy_And_Inflation_Model"}, {"title": "虚拟经济系统"}]}
+        ]
+      }
+    },
+    {
+      "id": "review-b-17",
+      "type": "game_related",
+      "question": "版本排期总是延期，策划需求反复改，怎么和程序美术对齐？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "排期与变更管控", "acceptable": [{"title": "美术排期与里程碑管理"}, {"title": "延期案例 — 量产排期连环爆雷"}]}]
+      }
+    },
+    {
+      "id": "review-c-02",
+      "type": "game_related",
+      "question": "新手关卡怎么设计才能自然教会玩家核心操作，不用大段文字教程？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "无文字教学", "acceptable": [{"title": "FTUE_Best_Practices"}, {"title": "游戏机制 — 参考", "section_contains": "教会玩家机制"}]}]
+      }
+    },
+    {
+      "id": "review-c-05",
+      "type": "game_related",
+      "question": "长期在线玩家资源溢出，要设计哪些消耗渠道比较合适？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "资源流诊断", "acceptable": [{"title": "SKILL"}, {"title": "成长曲线设计"}]},
+          {"name": "消耗出口", "acceptable": [{"title": "虚拟经济系统"}]}
+        ]
+      }
+    },
+    {
+      "id": "review-c-06",
+      "type": "game_related",
+      "question": "原型阶段优先验证哪些内容，不用投入大量美术资源？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "低成本原型", "acceptable": [{"title": "原型设计", "section_contains": "八种原型"}, {"title": "原型设计", "section_contains": "应用"}]}]
+      }
+    },
+    {
+      "id": "review-c-12",
+      "type": "game_related",
+      "question": "角色养成曲线后期增长乏力，有哪些平缓提升的设计思路？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "成长曲线", "acceptable": [{"title": "成长曲线设计", "section_contains": "应用"}, {"title": "成长曲线设计", "section_contains": "经验曲线函数"}]}]
+      }
+    },
+    {
+      "id": "review-c-15",
+      "type": "game_related",
+      "question": "和美术外包对接时，需要提前明确哪些规范减少反复修改？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "外包验收与修改边界", "acceptable": [{"title": "外包管理与验收规范"}, {"title": "外包资产交付与验收规范"}]}]
+      }
+    },
+    {
+      "id": "review-non-game-education",
+      "type": "non_game_related",
+      "question": "我们做的在线教育App，学生中途退课率很高，怎么在课程流程里设计一些“钩子”留住他们？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "review-non-game-finance",
+      "type": "non_game_related",
+      "question": "这个APP的注册流程转化率太低，是不是表单字段太多了？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "review-non-game-software",
+      "type": "non_game_related",
+      "question": "软件开发项目如何规范外包交付标准，降低沟通修改成本？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    }
+  ]
+}
