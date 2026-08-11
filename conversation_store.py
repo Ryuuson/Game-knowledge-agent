@@ -19,14 +19,6 @@ class Conversation:
     updated_at: str
 
 
-@dataclass(frozen=True)
-class ConversationSummary:
-    thread_id: str
-    summary: str
-    covered_message_count: int
-    updated_at: str
-
-
 def title_from_first_prompt(prompt: str, *, maximum_length: int = 32) -> str:
     """Create a local, readable title without an extra LLM request."""
     normalized = " ".join(prompt.split())
@@ -87,46 +79,11 @@ class ConversationStore:
     def delete(self, thread_id: str) -> None:
         with self._connect() as connection:
             connection.execute("DELETE FROM conversations WHERE thread_id = ?", (thread_id,))
-            connection.execute(
-                "DELETE FROM conversation_summaries WHERE thread_id = ?", (thread_id,)
-            )
             for table_name in ("checkpoints", "writes"):
                 if self._table_exists(connection, table_name):
                     connection.execute(
                         f"DELETE FROM {table_name} WHERE thread_id = ?", (thread_id,)
                     )
-
-    def get_summary(self, thread_id: str) -> ConversationSummary | None:
-        with self._connect() as connection:
-            row = connection.execute(
-                """
-                SELECT thread_id, summary, covered_message_count, updated_at
-                FROM conversation_summaries
-                WHERE thread_id = ?
-                """,
-                (thread_id,),
-            ).fetchone()
-        return ConversationSummary(*row) if row else None
-
-    def save_summary(
-        self,
-        thread_id: str,
-        summary: str,
-        covered_message_count: int,
-    ) -> None:
-        with self._connect() as connection:
-            connection.execute(
-                """
-                INSERT INTO conversation_summaries (
-                    thread_id, summary, covered_message_count, updated_at
-                ) VALUES (?, ?, ?, ?)
-                ON CONFLICT(thread_id) DO UPDATE SET
-                    summary = excluded.summary,
-                    covered_message_count = excluded.covered_message_count,
-                    updated_at = excluded.updated_at
-                """,
-                (thread_id, summary, covered_message_count, self._timestamp()),
-            )
 
     def _create_schema(self) -> None:
         with self._connect() as connection:
@@ -144,16 +101,6 @@ class ConversationStore:
                 """
                 CREATE INDEX IF NOT EXISTS conversations_updated_at_idx
                 ON conversations (updated_at DESC)
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS conversation_summaries (
-                    thread_id TEXT PRIMARY KEY,
-                    summary TEXT NOT NULL,
-                    covered_message_count INTEGER NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
                 """
             )
 

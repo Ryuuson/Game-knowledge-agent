@@ -1,11 +1,19 @@
 import streamlit as st
-from Agent import graph, create_config, TOOL_START_MSGS, TOOL_END_MSGS, DEFAULT_START, DEFAULT_END
+from Agent import (
+    DEFAULT_END,
+    DEFAULT_START,
+    TOOL_END_MSGS,
+    TOOL_START_MSGS,
+    capture_turn_memory,
+    create_config,
+    durable_memory,
+    graph,
+)
 from conversation_store import (
     ConversationStore,
     LEGACY_TITLE,
     title_from_first_prompt,
 )
-from conversation_context import remove_internal_summary
 from langchain_core.messages import AIMessage, HumanMessage, AIMessageChunk, ToolMessage
 from datetime import datetime
 from pathlib import Path
@@ -37,6 +45,11 @@ def _start_new_conversation() -> None:
     st.session_state.messages = []
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def _list_memories():
+    return durable_memory.list()
+
+
 conversation_store = ConversationStore(Path(__file__).with_name("agent_memory.sqlite"))
 
 # ---------- session state 初始化 ----------
@@ -55,6 +68,9 @@ with st.sidebar:
     st.divider()
     st.markdown("### 会话管理")
     if st.button("新建会话", use_container_width=True):
+        _start_new_conversation()
+        st.rerun()
+    if st.button("清空当前聊天", use_container_width=True):
         _start_new_conversation()
         st.rerun()
 
@@ -96,6 +112,29 @@ with st.sidebar:
     else:
         st.caption("还没有历史会话")
 
+    st.divider()
+    st.markdown("### 长期记忆")
+    if st.button("刷新记忆", use_container_width=True):
+        _list_memories.clear()
+    try:
+        memories = _list_memories()
+    except Exception as error:
+        st.caption(f"记忆后端不可用：{error}")
+    else:
+        if not memories:
+            st.caption("还没有保存的长期记忆")
+        for memory in memories:
+            memory_column, delete_memory_column = st.columns([5, 1])
+            memory_column.caption(memory.content)
+            if delete_memory_column.button("删除", key=f"memory_{memory.uri}"):
+                try:
+                    durable_memory.delete(memory.uri)
+                except Exception as error:
+                    st.error(f"删除记忆失败：{error}")
+                else:
+                    _list_memories.clear()
+                    st.rerun()
+
 # ---------- 渲染历史消息 ----------
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -117,9 +156,6 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
 
     # 准备调用图
     input_state = {"messages": [HumanMessage(content=prompt)]}
-    summary_before = conversation_store.get_summary(st.session_state.thread_id)
-    covered_before = summary_before.covered_message_count if summary_before else 0
-
     with st.chat_message("assistant"):
         reply_box = st.empty()
         status_box = st.empty()
@@ -166,15 +202,14 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
             ):
                 pending_text += chunk.content
 
-        # 模型若意外复述内部摘要，绝不把它显示或保存到聊天记录。
-        stored_summary = conversation_store.get_summary(st.session_state.thread_id)
-        summary_text = stored_summary.summary if stored_summary else ""
-        full_text = remove_internal_summary(pending_text, summary_text)
+        full_text = pending_text
         reply_box.markdown(full_text)
         status_box.empty()  # 清除工具状态
-        if stored_summary and stored_summary.covered_message_count > covered_before:
-            st.caption("本轮已压缩较早的对话上下文，完整历史仍保留在此会话中。")
 
     # 保存助手回复
     st.session_state.messages.append({"role": "assistant", "content": full_text})
     conversation_store.touch(st.session_state.thread_id)
+
+    # The visible transcript is persisted before best-effort memory extraction.
+    if capture_turn_memory(st.session_state.thread_id, prompt, full_text):
+        _list_memories.clear()
