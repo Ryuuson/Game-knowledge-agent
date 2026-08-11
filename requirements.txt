@@ -3,4 +3,8 @@ langgraph==1.2.10
 langgraph-checkpoint-sqlite==3.1.1
 langchain-openai==1.4.1
 python-dotenv==1.2.2
+numpy==2.2.6
 requests==2.34.2
+sentence-transformers==5.6.1
+torch==2.13.0
+torchvision==0.28.0
