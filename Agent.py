@@ -151,13 +151,20 @@ def classify_game_retrieval(score: float) -> str:
 
 
 def _domain_signal_response(query: str) -> str | None:
-    """Avoid retrieving game evidence for a high-specificity non-game query."""
+    """Avoid retrieving game evidence for non-game or gamified non-game queries."""
     signals = classify_query_domain(query)
-    if signals.classification != "clear_non_game":
+    if signals.classification not in {"clear_non_game", "gamified_non_game"}:
         return None
-    matched = "、".join(signals.non_game_signals)
+    non_game_matched = "、".join(signals.non_game_signals)
+    if signals.classification == "gamified_non_game":
+        game_matched = "、".join(signals.game_signals)
+        return (
+            f"检索状态：跨领域游戏化（非游戏信号：{non_game_matched}；游戏化词汇：{game_matched}）。"
+            "未检索本地游戏知识库。可以仅从游戏化设计视角讨论，不应把游戏资料当作该行业的事实或完整方案；"
+            "若用户需要该行业方案，应使用联网搜索。"
+        )
     return (
-        f"检索状态：领域待确认（非游戏信号：{matched}）。"
+        f"检索状态：领域待确认（非游戏信号：{non_game_matched}）。"
         "不要使用本地游戏知识直接回答。若用户实际在问游戏内系统，请先请用户补充游戏语境；"
         "否则应使用联网搜索，并说明回答来自联网搜索。"
     )
@@ -631,6 +638,7 @@ SYSTEM_PROMPT = """
    → 用 search_game_knowledge 查“游戏设计知识库”。它汇集 game-design-wiki、Game-Knowledge-Base、open-game-mechanics-dataset、Game_Num_Basics_And_Calc、gamedev_at_home 和 senior-game-designer 六个公开来源。
    → 用户用“这个”“那个”“它”“这里”等模糊指代，或问题表述不完整但可能在问游戏知识时，也先检索该库，不要因为未出现准确术语就跳过检索。
    → 工具返回“检索状态：待确认”时：若问题或历史明确是游戏语境，才用证据回答；若明确是建筑、金融等非游戏行业，不得套用游戏资料，应改用联网或说明不适用；若行业不明确，先用一句话澄清“你指的是游戏项目中的……吗？”。
+   → 工具返回“检索状态：跨领域游戏化”时：可以说明仅能提供游戏化设计迁移视角，不得将游戏知识库当作该行业的完整依据；用户需要行业方案时，改用联网搜索。
 2. 个人学习资料（knowledge 目录：离散数学、嵌入式、AI 笔记等）
    → 用 search_documents 按关键词检索，或 read_document / read_document_section 读文件。
    → 需要列出有什么文件时，先调用 list_files(source="knowledge")。

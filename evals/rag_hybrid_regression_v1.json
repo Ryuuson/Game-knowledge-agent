@@ -184,6 +184,251 @@
       "type": "non_game_related",
       "question": "软件开发项目如何规范外包交付标准，降低沟通修改成本？",
       "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "external-pity-randomness",
+      "type": "game_related",
+      "question": "RPG道具掉落的 pity timer 如何搭配权重随机算法，避免玩家感知到保底规律？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "随机性与掉落控制", "acceptable": [{"title": "Roguelike_RNG_Systems"}, {"title": "Loot_Reservoir_Algorithm"}]}]
+      }
+    },
+    {
+      "id": "external-navmesh-performance",
+      "type": "game_related",
+      "question": "NavMesh 动态障碍物更新很频繁时，如何降低移动端寻路的 CPU 开销？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "动态寻路", "acceptable": [{"title": "NavMesh_Pathfinding_Guide"}]}]
+      }
+    },
+    {
+      "id": "external-damage-formula",
+      "type": "game_related",
+      "question": "动作游戏 DPS 计算公式如何区分技能基础伤害、倍率、护甲减免与暴击乘区？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "战斗数值公式", "acceptable": [{"title": "Excel_Numerical_Templates"}, {"title": "Numerical_Manual"}, {"title": "平衡掌控者 — 参考"}]}]
+      }
+    },
+    {
+      "id": "external-roguelike-build-diversity",
+      "type": "game_related",
+      "question": "Roguelike 游戏中，玩家总拿同一套 build 通关，怎么提高每局差异又不让随机性失控？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "构筑多样性", "acceptable": [{"title": "Roguelike_Perks"}]}]
+      }
+    },
+    {
+      "id": "external-tower-defense-dda",
+      "type": "game_related",
+      "question": "塔防游戏的敌人波次生成器如何根据玩家实时战力调整难度曲线？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "动态难度", "acceptable": [{"title": "Difficulty_And_DDA_System"}, {"title": "难度曲线设计"}]}]
+      }
+    },
+    {
+      "id": "external-content-cadence",
+      "type": "game_related",
+      "question": "长期游玩内容应该怎样规划更新频率，防止玩家快速消耗完所有可玩内容？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "内容节奏", "acceptable": [{"title": "Event_Cadence_Strategy"}, {"title": "玩家动机与留存"}]}]
+      }
+    },
+    {
+      "id": "external-late-game-balance",
+      "type": "game_related",
+      "question": "后期敌人血量太高打不动，但直接降低数值又会让前期装备显得过强，这种情况该怎么处理？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "战斗节奏与属性价值", "acceptable": [{"title": "数值平衡"}]}]
+      }
+    },
+    {
+      "id": "external-boss-readability",
+      "type": "game_related",
+      "question": "玩家反馈 BOSS 某个技能看不清前摇就死了，是动画问题还是判定框问题，或者两者都有？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "动画与判定对齐", "acceptable": [{"title": "Damage_Judgment_Mechanisms_Guide"}]},
+          {"name": "攻击预告", "acceptable": [{"title": "Boss_Design_Philosophy"}]}
+        ]
+      }
+    },
+    {
+      "id": "external-day-one-retention",
+      "type": "game_related",
+      "question": "手游新手第一天流失率特别高，可能是教程太长、第一个关卡太难，还是奖励不够有爽感？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "新手漏斗", "acceptable": [{"title": "Game_Dev_Toolchain_Guide"}]},
+          {"name": "早期流失诊断", "acceptable": [{"title": "Game_Psychology_DeepDive"}]}
+        ]
+      }
+    },
+    {
+      "id": "external-non-game-saas",
+      "type": "non_game_related",
+      "question": "SaaS 客户成功体系如何设置阶段性激励，提升客户留存时长？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "external-non-game-ecommerce",
+      "type": "non_game_related",
+      "question": "电商会员成长体系的数值模型怎么设计，才能平衡普通消费者和高价值客户权益？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "external-non-game-collaboration",
+      "type": "non_game_related",
+      "question": "在线协作工具的新用户 onboarding 流程如何优化，减少注册后流失？",
+      "expectations": {"domain_blocked": true, "evidence_groups": []}
+    },
+    {
+      "id": "expansion-economy-devaluation",
+      "type": "game_related",
+      "question": "活动后免费货币迅速贬值，应该怎样用资源流图定位产出和消耗失衡，并设计回收渠道？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "货币贬值与回收", "acceptable": [{"title": "货币与市场"}]},
+          {"name": "产消平衡", "acceptable": [{"title": "成长曲线设计"}]}
+        ]
+      }
+    },
+    {
+      "id": "expansion-behavior-tree-stability",
+      "type": "game_related",
+      "question": "敌人行为树在攻击和撤退之间频繁切换，黑板状态和 Running 节点该怎么设计才能稳定调试？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "行为树调试", "acceptable": [{"title": "行为树（Behavior Trees）"}]},
+          {"name": "状态作用域与运行节点", "acceptable": [{"title": "决策架构选型"}]}
+        ]
+      }
+    },
+    {
+      "id": "expansion-procedural-reverse-simulation",
+      "type": "game_related",
+      "question": "程序化益智关卡怎样先生成可解答案再逆向模拟关卡，避免玩家遇到无解布局？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "逆向模拟与评估", "acceptable": [{"title": "程序化生成", "section_contains": "逆向模拟"}, {"title": "第8章 通过自动化提升开发", "section_contains": "逆向模拟"}]}]
+      }
+    },
+    {
+      "id": "expansion-procedural-room-library",
+      "type": "game_related",
+      "question": "程序化地牢如何结合手工房间库和布局算法，在重玩价值与关卡质量之间取舍？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "地牢布局与房间库", "acceptable": [{"title": "Procedural_Generation_Guide"}]}]
+      }
+    },
+    {
+      "id": "expansion-first-failure",
+      "type": "game_related",
+      "question": "新手第一次失败后就退出，怎样让玩家理解死亡原因并愿意立刻再试一次？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "早期流失与痛点诊断", "acceptable": [{"title": "Game_Psychology_DeepDive"}]},
+          {"name": "首局教学设计", "acceptable": [{"title": "FTUE_Best_Practices"}]}
+        ]
+      }
+    },
+    {
+      "id": "expansion-difficulty-fairness",
+      "type": "game_related",
+      "question": "调高难度时，加快游戏速度、增加敌人数量和放大障碍物，哪种更不容易让玩家觉得不公平？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "难度调整的公平性", "acceptable": [{"title": "难度曲线设计", "section_contains": "调难度的方法对比"}, {"title": "第5章 小游戏的适度难度", "section_contains": "调难度的方法"}]}]
+      }
+    },
+    {
+      "id": "expansion-stat-exchange-rate",
+      "type": "game_related",
+      "question": "战斗里攻速、暴击和攻击力同时成长，怎样按预期战斗时长把不同属性换算成统一价值比较？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [
+          {"name": "属性价值汇率", "acceptable": [{"title": "数值平衡"}]},
+          {"name": "战斗时长反推", "acceptable": [{"title": "战斗数值设计"}]}
+        ]
+      }
+    },
+    {
+      "id": "expansion-season-cadence",
+      "type": "game_related",
+      "question": "赛季玩法重复导致玩家觉得每天只是做日常，怎样安排周常循环和大活动节奏？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "运营活动节奏", "acceptable": [{"title": "Event_Cadence_Strategy"}]}]
+      }
+    },
+    {
+      "id": "expansion-boss-telegraph","type": "game_related",
+      "question": "Boss 的高伤害技能该怎样配置前摇、视觉和听觉提示，才能让玩家把失败归因于操作而不是不公平？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "Boss 攻击电报", "acceptable": [{"title": "Boss_Design_Philosophy"}]}]
+      }
+    },
+    {
+      "id": "expansion-ai-lod","type": "game_related",
+      "question": "AI LOD 中，近中远距离的 NPC 应怎样分别设置 Tick 率、行为树深度、感知范围和寻路精度？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "AI 细节层次", "acceptable": [{"title": "游戏AI架构设计", "section_contains": "AI LOD"}, {"title": "决策架构选型", "section_contains": "AI LOD"}]}]
+      }
+    },
+    {
+      "id": "expansion-roguelike-false-choice","type": "game_related",
+      "question": "Roguelike 奖励总是攻击加成和生命加成，玩家只选一种，这是不是假选择，怎样用核心机制、放大器和触发器增加协同？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "构筑协同与假选择", "acceptable": [{"title": "Roguelike_Perks"}]}]
+      }
+    },
+    {
+      "id": "expansion-control-friction","type": "game_related",
+      "question": "玩家被怪物无限晕眩和硬直、完全无法操作后退出，怎样把这种恶性痛点改成可理解、可应对的挑战？",
+      "expectations": {
+        "domain_blocked": false,
+        "evidence_groups": [{"name": "控制剥夺的挫败修复", "acceptable": [{"title": "Game_Psychology_DeepDive"}]}]
+      }
+    },
+    {
+      "id": "gamified-non-game-video",
+      "type": "non_game_related",
+      "question": "短视频平台怎样用任务玩法和等级奖励提升创作者留存？",
+      "expectations": {"domain_blocked": true, "domain_classification": "gamified_non_game", "evidence_groups": []}
+    },
+    {
+      "id": "gamified-non-game-ecommerce",
+      "type": "non_game_related",
+      "question": "电商会员的关卡化成长体系怎么设计，平衡消费者权益？",
+      "expectations": {"domain_blocked": true, "domain_classification": "gamified_non_game", "evidence_groups": []}
+    },
+    {
+      "id": "gamified-non-game-education",
+      "type": "non_game_related",
+      "question": "在线教育平台的玩家完成课程关卡后，怎样调整奖励节奏？",
+      "expectations": {"domain_blocked": true, "domain_classification": "gamified_non_game", "evidence_groups": []}
+    },
+    {
+      "id": "gamified-non-game-saas",
+      "type": "non_game_related",
+      "question": "SaaS 产品里用户完成引导关卡后的留存率很低，怎么优化？",
+      "expectations": {"domain_blocked": true, "domain_classification": "gamified_non_game", "evidence_groups": []}
     }
   ]
 }

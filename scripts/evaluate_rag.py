@@ -124,8 +124,12 @@ def evaluate_expectations(records: list[dict[str, Any]]) -> dict[str, Any] | Non
     for record in reviewed:
         expectations = record["expectations"]
         domain_expected = expectations.get("domain_blocked")
+        classification_expected = expectations.get("domain_classification")
         domain_passed = (
             domain_expected is None or record["domain_blocked"] == domain_expected
+        ) and (
+            classification_expected is None
+            or record.get("domain_classification") == classification_expected
         )
         group_results = []
         for group in expectations.get("evidence_groups", []):
@@ -189,7 +193,8 @@ def main() -> None:
     for method in ("dense", "hybrid"):
         records_by_threshold: dict[str, list[dict[str, Any]]] = {str(value): [] for value in thresholds}
         for case in cases:
-            domain_blocked = classify_query_domain(case["question"]).classification == "clear_non_game"
+            domain = classify_query_domain(case["question"])
+            domain_blocked = domain.classification in {"clear_non_game", "gamified_non_game"}
             if domain_blocked:
                 candidates: list[dict[str, Any]] = []
             else:
@@ -219,6 +224,7 @@ def main() -> None:
                     {
                         **case,
                         "domain_blocked": domain_blocked,
+                        "domain_classification": domain.classification,
                         "band": routing_band(candidates, threshold, args.high_threshold),
                         "top_semantic_score": accepted[0]["score"] if accepted else None,
                         "titles": [hit.get("title", "") for hit in accepted],

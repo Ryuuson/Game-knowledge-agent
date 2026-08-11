@@ -9,6 +9,7 @@ import pytest
 
 import Agent
 from scripts.evaluate_rag import evaluate_expectations
+from wiki_corpus.domain_signals import classify_query_domain
 from wiki_corpus.hybrid_search import BM25Index, fuse_rrf, rank_hybrid, tokenize
 from wiki_corpus.vector_search import rank_chunks
 
@@ -98,6 +99,48 @@ def test_retrieval_tiers_follow_configured_backend(monkeypatch):
     assert Agent.classify_game_retrieval(0.50) == "no_evidence"
     assert Agent.classify_game_retrieval(0.51) == "ambiguous"
     assert Agent.classify_game_retrieval(0.63) == "high_confidence"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "SaaS 客户成功体系如何设置阶段性激励，提升客户留存时长？",
+        "线上教育产品如何搭建学习任务难度曲线，提升学员完课率？",
+        "短视频平台怎样优化创作者任务流水线，缩短内容上线周期？",
+        "电商会员成长体系如何平衡普通消费者和高价值客户权益？",
+        "企业外包项目的交付验收标准怎么制定，避免反复返工？",
+        "在线协作工具的新用户 onboarding 流程如何优化，减少注册后流失？",
+    ],
+)
+def test_explicit_non_game_product_contexts_are_domain_blocked(question):
+    assert classify_query_domain(question).classification == "clear_non_game"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "短视频平台怎样用任务玩法和等级奖励提升创作者留存？",
+        "电商会员的关卡化成长体系怎么设计，平衡消费者权益？",
+        "在线教育平台的玩家完成课程关卡后，怎样调整奖励节奏？",
+        "SaaS 产品里用户完成引导关卡后的留存率很低，怎么优化？",
+    ],
+)
+def test_gamified_non_game_context_is_blocked_without_searching_game_knowledge(question):
+    assert classify_query_domain(question).classification == "gamified_non_game"
+    response = Agent._domain_signal_response(question)
+    assert response is not None
+    assert response.startswith("检索状态：跨领域游戏化")
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "企业外包项目的游戏角色资产验收标准怎么制定？",
+        "游戏中的电商会员中心怎样设计付费权益？",
+    ],
+)
+def test_explicit_game_object_context_wins_over_non_game_industry_terms(question):
+    assert classify_query_domain(question).classification == "game_context"
 
 
 def test_tokenize_handles_chinese_bigrams_and_technical_terms():

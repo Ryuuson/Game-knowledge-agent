@@ -1,0 +1,36 @@
+{"id":"external-01-pity","type":"game_related","question":"RPG道具掉落的 pity timer 如何搭配权重随机算法，避免玩家感知到保底规律？","coverage":"保底与随机性管理"}
+{"id":"external-02-navmesh","type":"game_related","question":"NavMesh 动态障碍物更新很频繁时，如何降低移动端寻路的 CPU 开销？","coverage":"寻路与性能权衡"}
+{"id":"external-03-economy","type":"game_related","question":"MMO 开放世界的动态经济体系如何调控材料产出，防止通货膨胀？","coverage":"虚拟经济的水龙头与回收"}
+{"id":"external-04-mcts","type":"game_related","question":"使用 MCTS 实现回合制 AI 对战时，怎么平衡算力消耗与决策策略深度？","coverage":"博弈 AI 与蒙特卡洛树搜索"}
+{"id":"external-05-damage","type":"game_related","question":"动作游戏 DPS 计算公式如何区分技能基础伤害、倍率、护甲减免与暴击乘区？","coverage":"战斗数值与伤害公式"}
+{"id":"external-06-roguelike-builds","type":"game_related","question":"Roguelike 游戏中，玩家总拿同一套 build 通关，怎么提高每局差异又不让随机性失控？","coverage":"Roguelike 构筑多样性与随机性管理"}
+{"id":"external-07-open-world-exploration","type":"game_related","question":"开放世界任务怎样引导玩家探索，又不让任务锚点破坏环境沉浸感？","coverage":"开放世界探索驱动与路径引导"}
+{"id":"external-08-tower-defense-dda","type":"game_related","question":"塔防游戏的敌人波次生成器如何根据玩家实时战力调整难度曲线？","coverage":"动态难度与数值平衡"}
+{"id":"external-09-card-curve","type":"game_related","question":"卡牌游戏费用曲线怎么设计，才能保证前期和后期卡组策略都有多样性？","coverage":"资源曲线与卡组平衡"}
+{"id":"external-10-offline-rewards","type":"game_related","question":"放置类游戏的离线收益公式该设置哪些上限，才能不让玩家差距越来越大？","coverage":"成长曲线与经济约束"}
+{"id":"external-11-new-player","type":"game_related","question":"怎么安排新手阶段的挑战梯度，减少刚上手玩家直接放弃的情况？","coverage":"新手引导与难度曲线"}
+{"id":"external-12-rewards","type":"game_related","question":"怎样调整闯关奖励节奏，让玩家持续愿意反复挑战高难度关卡？","coverage":"奖励节奏与挑战动机"}
+{"id":"external-13-trading","type":"game_related","question":"怎么设计玩家之间的物品交换规则，避免少数人快速囤积稀缺资源？","coverage":"玩家交易与虚拟经济"}
+{"id":"external-14-respawn","type":"game_related","question":"怎么设置野怪刷新间隔，既不让地图显得空旷，又不会持续刷怪刷资源？","coverage":"资源产出节奏"}
+{"id":"external-15-boss-loot","type":"game_related","question":"组队挑战 BOSS 时如何分配战利品，兼顾单人贡献与组队参与意愿？","coverage":"合作激励与奖励分配"}
+{"id":"external-16-cooldown","type":"game_related","question":"怎么调整技能冷却时间，避免单一打法反复碾压全部对局？","coverage":"战斗机制与策略多样性"}
+{"id":"external-17-collection","type":"game_related","question":"怎样规划收集目标，引导玩家主动走遍地图各个区域？","coverage":"探索驱动与兴趣点设计"}
+{"id":"external-18-content-cadence","type":"game_related","question":"长期游玩内容应该怎样规划更新频率，防止玩家快速消耗完所有可玩内容？","coverage":"长线内容与留存节奏"}
+{"id":"external-19-pricing","type":"game_related","question":"玩家付费礼包的定价梯度怎么搭建，才能兼顾普通玩家留存和高付费用户的消费意愿？","coverage":"F2P 经济与付费分层"}
+{"id":"external-20-branching","type":"game_related","question":"剧情分支选择系统如何实现多结局，同时控制美术和动画制作成本不超标？","coverage":"叙事分支与制作约束"}
+{"id":"external-21-pathfinding-diagnosis","type":"game_related","question":"怪物 AI 总是卡在墙角或者绕路，是寻路问题还是行为树设计问题？","coverage":"寻路与行为树诊断"}
+{"id":"external-22-procedural","type":"game_related","question":"程序化生成地牢时，如何验证入口到 Boss 房的可达性，避免生成走不通的死路？","coverage":"程序化生成的可解性验证"}
+{"id":"external-23-late-game","type":"game_related","question":"后期敌人血量太高打不动，但直接降低数值又会让前期装备显得过强，这种情况该怎么处理？","coverage":"数值膨胀、难度曲线与装备平衡"}
+{"id":"external-24-farming-social","type":"game_related","question":"做种地加社交的手游，怎么让玩家每天上线有事做又不觉得像上班一样累？","coverage":"日常循环、玩家负担与社交节奏"}
+{"id":"external-25-campers","type":"game_related","question":"射击游戏里玩家总是蹲在角落不动，地图设计要怎么改才能鼓励他们移动和交火？","coverage":"地图设计与玩家行为引导"}
+{"id":"external-26-tutorial","type":"game_related","question":"为什么有些游戏教程教了很久玩家还是不会操作，是引导时机还是信息密度出了问题？","coverage":"新手教学、认知负荷与 UX"}
+{"id":"external-27-guild","type":"game_related","question":"手游公会战总是少数人在出力，其他人挂机等奖励，这种搭便车问题怎么改善？","coverage":"公会机制与激励相容"}
+{"id":"external-28-boss-readability","type":"game_related","question":"玩家反馈 BOSS 某个技能看不清前摇就死了，是动画问题还是判定框问题，或者两者都有？","coverage":"动作游戏可读性、攻击预告与判定"}
+{"id":"external-29-day-one-retention","type":"game_related","question":"手游新手第一天流失率特别高，可能是教程太长、第一个关卡太难，还是奖励不够有爽感？","coverage":"首日留存与新手体验诊断"}
+{"id":"external-30-resource-sinks","type":"game_related","question":"长期在线玩家资源溢出时，应该设计哪些消耗渠道？","coverage":"虚拟经济的资源出口"}
+{"id":"external-31-education","type":"non_game_related","question":"线上教育产品如何搭建学习任务难度曲线，提升学员完课率？","coverage":"明确非游戏：教育"}
+{"id":"external-32-saas","type":"non_game_related","question":"SaaS 客户成功体系如何设置阶段性激励，提升客户留存时长？","coverage":"明确非游戏：企业软件"}
+{"id":"external-33-video","type":"non_game_related","question":"短视频平台怎样优化创作者任务流水线，缩短内容上线周期？","coverage":"明确非游戏：短视频"}
+{"id":"external-34-ecommerce","type":"non_game_related","question":"电商会员成长体系的数值模型怎么设计，才能平衡普通消费者和高价值客户权益？","coverage":"明确非游戏：电商"}
+{"id":"external-35-outsourcing","type":"non_game_related","question":"企业外包项目的交付验收标准怎么制定，避免反复返工和沟通成本过高？","coverage":"明确非游戏：企业项目"}
+{"id":"external-36-collaboration","type":"non_game_related","question":"在线协作工具的新用户 onboarding 流程如何优化，减少注册后流失？","coverage":"明确非游戏：协作软件"}

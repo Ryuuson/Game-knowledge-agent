@@ -3,7 +3,9 @@
 from dataclasses import dataclass
 
 
-# A game cue wins over a non-game cue: industry terms can describe game content.
+# Generic game vocabulary is often borrowed by non-game products. An explicit
+# game-object marker takes precedence only when a high-specificity non-game
+# context is also present.
 GAME_CUES = (
     "游戏",
     "玩家",
@@ -11,12 +13,19 @@ GAME_CUES = (
     "副本",
     "boss",
     "玩法",
-    "数值",
     "pve",
     "pvp",
     "roguelike",
     "模拟经营",
     "城市天际线",
+)
+
+GAME_OBJECT_CUES = (
+    "游戏内",
+    "游戏中",
+    "游戏项目",
+    "游戏角色",
+    "游戏里的",
 )
 
 # These are intentionally complete, high-specificity phrases rather than generic
@@ -25,6 +34,7 @@ NON_GAME_CUES = (
     "医院预约挂号",
     "医院导诊",
     "在线教育",
+    "线上教育",
     "教育app",
     "教育 app",
     "金融产品",
@@ -39,6 +49,11 @@ NON_GAME_CUES = (
     "软件开发项目",
     "商业门店",
     "app的注册流程",
+    "saas",
+    "短视频平台",
+    "电商会员",
+    "企业外包项目",
+    "在线协作工具",
 )
 
 
@@ -61,10 +76,13 @@ def _matched_cues(query: str, cues: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def classify_query_domain(query: str) -> DomainSignals:
-    """Return game, clear non-game, or unresolved without making a routing decision."""
+    """Return game, non-game, gamified non-game, or unresolved domain signals."""
     game_signals = _matched_cues(query, GAME_CUES)
     non_game_signals = _matched_cues(query, NON_GAME_CUES)
-    if game_signals:
+    game_object_signals = _matched_cues(query, GAME_OBJECT_CUES)
+    if non_game_signals and game_signals and not game_object_signals:
+        classification = "gamified_non_game"
+    elif game_signals:
         classification = "game_context"
     elif non_game_signals:
         classification = "clear_non_game"
