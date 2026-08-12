@@ -1,0 +1,9 @@
+[server]
+# This application stores conversations on the local machine. Keep the
+# development server private unless an authenticated reverse proxy is in front.
+address = "127.0.0.1"
+enableCORS = true
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false

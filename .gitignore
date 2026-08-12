@@ -5,6 +5,7 @@ __pycache__/
 agent_memory.sqlite
 agent_memory.sqlite-shm
 agent_memory.sqlite-wal
+agent_audit.jsonl
 knowledge_index.sqlite
 data/*
 !data/game_knowledge_chunks.jsonl

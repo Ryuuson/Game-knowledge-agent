@@ -7,8 +7,9 @@ from conversation_store import (
 )
 from conversation_context import remove_internal_summary
 from langchain_core.messages import AIMessage, HumanMessage, AIMessageChunk, ToolMessage
-from datetime import datetime
+from uuid import uuid4
 from pathlib import Path
+from security import MAX_PROMPT_CHARS, input_guardrail, redact_sensitive_output
 
 st.set_page_config(page_title="游戏知识 Agent", page_icon="🎮")
 st.title("🎮 游戏知识 Agent")
@@ -16,7 +17,7 @@ st.caption("基于游戏设计知识库的智能顾问")
 
 
 def _new_thread_id() -> str:
-    return f"web_{datetime.now().timestamp()}"
+    return f"web_{uuid4().hex}"
 
 
 def _restore_messages(thread_id: str) -> list[dict[str, str]]:
@@ -102,10 +103,16 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # ---------- 用户输入 ----------
-if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
+if prompt := st.chat_input("例如：如何设计游戏的经济系统？", max_chars=MAX_PROMPT_CHARS):
+    is_safe, prompt_or_reason = input_guardrail(prompt)
+    if not is_safe:
+        st.error(prompt_or_reason)
+        st.stop()
+    prompt = prompt_or_reason
     if not st.session_state.messages:
         conversation_store.register(
-            st.session_state.thread_id, title_from_first_prompt(prompt)
+            st.session_state.thread_id,
+            title_from_first_prompt(prompt),
         )
     else:
         conversation_store.touch(st.session_state.thread_id)
@@ -169,7 +176,7 @@ if prompt := st.chat_input("例如：如何设计游戏的经济系统？"):
         # 模型若意外复述内部摘要，绝不把它显示或保存到聊天记录。
         stored_summary = conversation_store.get_summary(st.session_state.thread_id)
         summary_text = stored_summary.summary if stored_summary else ""
-        full_text = remove_internal_summary(pending_text, summary_text)
+        full_text = redact_sensitive_output(remove_internal_summary(pending_text, summary_text))
         reply_box.markdown(full_text)
         status_box.empty()  # 清除工具状态
         if stored_summary and stored_summary.covered_message_count > covered_before:
