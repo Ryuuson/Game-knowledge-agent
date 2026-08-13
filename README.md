@@ -1,8 +1,8 @@
 # Game Knowledge Agent
 
-做游戏设计时，机制拆解、数值公式、外包规范和制作经验常散在不同资料里；需要核对一个判断时，往往得翻很久。这是一个把这些资料放进本地检索库、再用对话方式取用的项目。
+游戏设计中的机制拆解、数值公式、外包规范和制作经验常常散落在不同资料里，核对一个判断时往往要翻很久。这个项目把这些资料整理进本地检索库，再通过对话方式调用。
 
-当前随项目提供 **6,515 个游戏设计知识块**。它适合拿来讨论设计方案、找回已有做法，或在长对话里继续推演同一件事。
+项目目前包含 **6,515 个游戏设计知识块**。可用于讨论设计方案、查找已有做法，或在长对话中继续推演同一个问题。
 
 可以直接这样问：
 
@@ -12,7 +12,7 @@
 
 > “美术外包的交付物反复返工，验收标准应该先定哪些？”
 
-它给的是可供继续讨论的设计依据，不替项目做最终决策。库里没有的内容，或需要最新公开资料时，才会考虑联网搜索。
+它提供的是供讨论和判断参考的设计资料，不替项目做最终决策。只有本地资料不足，或问题需要最新公开信息时，才会考虑联网搜索。
 
 ## 工作方式
 
@@ -27,11 +27,11 @@ flowchart LR
     W --> L
 ```
 
-默认检索会用本地 BGE 模型做语义召回，并用 BM25 补足精确术语、公式名和专有名词的召回；两路候选通过 reciprocal-rank fusion (RRF) 合并排序。最终证据仍必须达到原有 BGE 相似度下限，因此关键词命中不会绕过游戏领域相关性保护。每次检索的证据会按知识块去重，并受总字符预算限制。相似度不足时不会把不相关的游戏资料硬套到问题上；处在边界的结果会结合问题的游戏语境再判断。
+默认检索使用本地 BGE 模型进行语义召回，并用 BM25 补充精确术语、公式名和专有名词。两路候选通过 reciprocal-rank fusion (RRF) 合并排序。最终证据仍需达到 BGE 相似度下限，因此关键词命中不能绕过游戏领域相关性判断。每次检索会按知识块去重，并限制传入模型的总字符数。相似度不足时，系统不会把不相关的游戏资料套到问题上；边界结果会结合问题的游戏语境进一步判断。
 
-如果问题明确属于教育、电商、短视频或 SaaS，但借用了“任务”“关卡”“玩法”等游戏化表达，Agent 不会把本地游戏知识当作行业答案；它会说明只能提供游戏化设计迁移视角。明确讨论游戏内系统时，仍按游戏问题检索。
+如果问题明确属于教育、电商、短视频或 SaaS，只是借用了“任务”“关卡”“玩法”等游戏化说法，Agent 不会把本地游戏知识当作行业答案，而会说明只能提供游戏化设计的迁移视角。明确讨论游戏内系统时，仍按游戏问题检索。
 
-对话会保存在本机，也可以在界面中切换旧会话。会话过长时，早期内容会压缩成摘要供模型继续理解上下文，原始记录仍保留在本地。
+对话会保存在本机，可在界面中切换旧会话。会话过长时，早期内容会压缩为摘要供模型理解上下文，原始记录仍保留在本地。
 
 ## 跑起来
 
@@ -58,7 +58,7 @@ LLM_MODEL=your_chat_model
 
 启动成功后，在浏览器打开 `http://localhost:8501`。之后通常只需要执行第二条命令。
 
-首次构建会下载 BGE 模型并生成 SQLite 索引，耗时取决于网络和机器性能。索引不随 Git 提交；修改语料后可重建：
+首次构建会下载 BGE 模型并生成 SQLite 索引，所需时间取决于网络和机器性能。索引不随 Git 提交。修改语料后可重新构建：
 
 ```powershell
 .\.venv\Scripts\python.exe build_bge_combined_index.py --overwrite
@@ -66,33 +66,33 @@ LLM_MODEL=your_chat_model
 
 ## 配置
 
-| 配置 | 是否需要 | 用途 |
-| --- | --- | --- |
-| `LLM_API_KEY` | 是 | 聊天模型的 API Key |
-| `LLM_BASE_URL` | 是 | OpenAI-compatible 接口地址 |
-| `LLM_MODEL` | 是 | 聊天模型名称 |
-| `RAG_BACKEND=bge` | 否 | 默认值。本地 BGE 检索，不需要 embedding API |
-| `RAG_DENSE_CANDIDATES` / `RAG_LEXICAL_CANDIDATES` | 否 | 两路召回的候选数，默认各 20 |
-| `RAG_RRF_K` | 否 | RRF 融合常数，默认 60 |
-| `RAG_DENSE_RRF_WEIGHT` / `RAG_LEXICAL_RRF_WEIGHT` | 否 | BGE 与 BM25 的融合权重，默认 `1.0 / 0.25`，保持语义排序主导 |
-| `RAG_EVIDENCE_CHAR_BUDGET` | 否 | 单次传给对话模型的检索证据总字符上限，默认 9,000 |
-| `METASO_API_KEY` | 否 | 当前内置联网搜索适配器的凭据 |
-| `VISION_*` | 否 | 为图片文字识别指定单独的视觉模型 |
+| 配置                                                  | 是否需要 | 用途                                                         |
+| ----------------------------------------------------- | -------- | ------------------------------------------------------------ |
+| `LLM_API_KEY`                                       | 是       | 聊天模型的 API Key                                           |
+| `LLM_BASE_URL`                                      | 是       | OpenAI-compatible 接口地址                                   |
+| `LLM_MODEL`                                         | 是       | 聊天模型名称                                                 |
+| `RAG_BACKEND=bge`                                   | 否       | 默认值。本地 BGE 检索，不需要 embedding API                  |
+| `RAG_DENSE_CANDIDATES` / `RAG_LEXICAL_CANDIDATES` | 否       | 两路召回的候选数，默认各 20                                  |
+| `RAG_RRF_K`                                         | 否       | RRF 融合常数，默认 60                                        |
+| `RAG_DENSE_RRF_WEIGHT` / `RAG_LEXICAL_RRF_WEIGHT` | 否       | BGE 与 BM25 的融合权重，默认`1.0 / 0.25`，保持语义排序主导 |
+| `RAG_EVIDENCE_CHAR_BUDGET`                          | 否       | 单次传给对话模型的检索证据总字符上限，默认 9,000             |
+| `METASO_API_KEY`                                    | 否       | 当前内置联网搜索适配器的凭据                                 |
+| `VISION_*`                                          | 否       | 为图片文字识别指定单独的视觉模型                             |
 
 聊天模型通过 `LLM_*` 配置，接口需兼容 OpenAI Chat Completions。若 OCR 使用单独的视觉模型，可配置 `VISION_*`。
 
 ## 知识库
 
-知识库来自公开资料。下面的数字是实际进入索引的知识块数量，不是仓库文件数量：
+知识库来自公开资料。下表中的数字是进入索引的知识块数量，不是仓库文件数量：
 
-| 来源 | 侧重点 | 知识块 |
-| --- | --- | ---: |
-| [Being09/game-design-wiki](https://github.com/Being09/game-design-wiki) | 游戏设计方法与机制资料 | 712 |
-| [diedie23/Game-Knowledge-Base](https://diedie23.github.io/Game-Knowledge-Base/) | 制作流程、美术管线、外包、排期与验收 | 621 |
-| [Thaelith/open-game-mechanics-dataset](https://github.com/Thaelith/open-game-mechanics-dataset) | 结构化游戏机制与参数 | 2,676 |
-| [lsc1414/Game_Num_Basics_And_Calc](https://github.com/lsc1414/Game_Num_Basics_And_Calc) | 中文数值设计与计算 | 1,809 |
-| [zsc/gamedev_at_home](https://github.com/zsc/gamedev_at_home) | HTML5 游戏开发教程 | 609 |
-| [tigermkiiiddd/senior-game-designer](https://github.com/tigermkiiiddd/senior-game-designer) | 策划思维与工作方法 | 88 |
+| 来源                                                                                           | 侧重点                               | 知识块 |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------ | -----: |
+| [Being09/game-design-wiki](https://github.com/Being09/game-design-wiki)                         | 游戏设计方法与机制资料               |    712 |
+| [diedie23/Game-Knowledge-Base](https://diedie23.github.io/Game-Knowledge-Base/)                 | 制作流程、美术管线、外包、排期与验收 |    621 |
+| [Thaelith/open-game-mechanics-dataset](https://github.com/Thaelith/open-game-mechanics-dataset) | 结构化游戏机制与参数                 |  2,676 |
+| [lsc1414/Game_Num_Basics_And_Calc](https://github.com/lsc1414/Game_Num_Basics_And_Calc)         | 中文数值设计与计算                   |  1,809 |
+| [zsc/gamedev_at_home](https://github.com/zsc/gamedev_at_home)                                   | HTML5 游戏开发教程                   |    609 |
+| [tigermkiiiddd/senior-game-designer](https://github.com/tigermkiiiddd/senior-game-designer)     | 策划思维与工作方法                   |     88 |
 
 已切分的语料保存在两个文件中：
 
@@ -101,9 +101,9 @@ LLM_MODEL=your_chat_model
 
 `build_bge_combined_index.py` 会合并它们，得到 6,515 个向量并写入本地 SQLite 索引。查询时也必须使用同一个 BGE 编码器。
 
-不要混用不同 embedding 模型生成的索引和查询编码器。索引必须由当前查询使用的同一模型生成；模型不同，向量空间不同，混用不会得到可靠结果。
+不要混用不同 embedding 模型生成的索引和查询编码器。索引必须由当前查询使用的同一模型生成，因为不同模型的向量空间并不兼容。
 
-当前查询是进程内全量余弦扫描：首次加载时把全部向量读入内存并缓存，之后每次查询对全量向量做一次矩阵相似度计算。6,515 块规模下没有问题；若语料预计超过约 10 万知识块（或单次检索延迟不再可接受），再改用 ANN 索引（如 FAISS / HNSW），在此之前不需要引入额外依赖。
+当前查询在进程内做全量余弦扫描：首次加载时会把全部向量读入内存并缓存，之后每次查询进行一次矩阵相似度计算。对 6,515 个知识块来说，这个做法足够。若语料预计超过约 10 万知识块，或单次检索延迟变得不可接受，再考虑使用 ANN 索引，例如 FAISS 或 HNSW。
 
 ### 检索评测
 
@@ -113,19 +113,19 @@ LLM_MODEL=your_chat_model
 .\.venv\Scripts\python.exe scripts\evaluate_rag.py .\evals\routing_cases.jsonl --output .\data\rag-routing-report.json
 ```
 
-报告统计每个 `type` 的高相关、待确认和拒绝比例，并保留每题标题，便于人工抽检。它不等于召回正确率或回答质量；调整阈值前，仍应对正例命中是否真的支持问题、负例是否被错误放行进行人工审阅。
+报告按 `type` 统计高相关、待确认和拒绝的比例，并保留每题标题，便于人工抽检。这不等于召回正确率或回答质量。调整阈值前，仍应人工确认正例是否真的支持问题，以及负例是否被错误放行。
 
 `evals/rag_hybrid_regression_v1.json` 是已人工审阅的回归集。它用“证据组”表达某个问题必须覆盖的知识，而非固定某一条绝对排名；报告中的 `expectation_evaluation` 会显示 BGE 和混合检索各自的通过数与失败项。
 
 ## 本地与联网
 
-知识块、BGE 模型、向量索引和会话记录都保留在本机。聊天回答仍会调用你在 `.env` 中配置的模型 API，因此发送给模型的是当前问题及必要的上下文。
+知识块、BGE 模型、向量索引和会话记录都保留在本机。聊天回答仍会调用 `.env` 中配置的模型 API，发送给模型的是当前问题和必要的上下文。
 
-联网搜索默认关闭。当前内置适配器使用 Metaso，这是作者使用的搜索服务；配置 `METASO_API_KEY` 后，Agent 才能在本地资料不足或问题需要最新公开信息时联网搜索，联网回答会明确说明这一点，并附上工具实际返回的 2-3 条参考链接。
+联网搜索默认关闭。当前内置适配器使用 Metaso。配置 `METASO_API_KEY` 后，Agent 才会在本地资料不足或问题需要最新公开信息时联网搜索。使用联网搜索的回答会明确说明这一点，并附上工具实际返回的 2 到 3 条参考链接。
 
-Ark 和 Metaso 都不是项目的必要依赖。Ark 只是保留的个人检索配置示例；默认的 BGE 检索不依赖它。若团队已有其他 embedding 服务，可以接入该服务并重建与之匹配的索引。
+Ark 和 Metaso 都不是项目的必要依赖。Ark 只是保留的个人检索配置示例，默认的 BGE 检索不依赖它。若团队已有其他 embedding 服务，可以接入该服务并重建匹配的索引。
 
-同样，Metaso 可以替换为 Tavily、SerpAPI 或团队已有的搜索服务。当前代码只内置了 Metaso 适配器，因此替换搜索服务需要实现或改写联网搜索工具，而不只是把 `TAVILY_API_KEY` 写入 `.env`。这不会影响本地知识库检索。
+Metaso 也可以替换为 Tavily、SerpAPI 或团队已有的搜索服务。当前代码只内置了 Metaso 适配器，因此替换搜索服务需要实现或改写联网搜索工具，不是只把 `TAVILY_API_KEY` 写入 `.env`。这不会影响本地知识库检索。
 
 ## 项目结构
 
