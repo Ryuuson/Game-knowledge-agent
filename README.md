@@ -1,155 +1,123 @@
-# Game Knowledge Agent
+# 游戏知识助手
 
-游戏设计中的机制拆解、数值公式、外包规范和制作经验常常散落在不同资料里，核对一个判断时往往要翻很久。这个项目把这些资料整理进本地检索库，再通过对话方式调用。
+一个面向游戏设计资料的本地知识助手，用于查找机制、数值、经济系统与制作流程的依据，并延续同一个设计问题的讨论。本项目作为跨领域工程实践，重点是需求分解、系统实现、实验对比和结果验证。
 
-项目目前包含 **6,515 个游戏设计知识块**。可用于讨论设计方案、查找已有做法，或在长对话中继续推演同一个问题。
+已有知识库包含 **6 个公开来源、6,515 个知识块**。支持 BGE 语义检索、BM25 关键词检索、RRF 混合检索，以及带原始来源的聊天历史。系统提供参考资料和设计建议，回答仍需结合具体项目判断。
 
-可以直接这样问：
+## 可以怎样使用
 
-> “后期金币溢出，但砍掉落又会让前中期太苦，应该从哪里调？”
+- “玩家后期金币越来越多，经济系统如何设计回收机制？”
+- “技能伤害和冷却怎样配合，才不容易出现唯一解？”
+- “游戏美术外包交付时，怎样减少资产导入后的返工？”
 
-> “角色技能的伤害和冷却怎么配，才不容易出现唯一解？”
+启动后默认进入**离线检索演示**：只展示本地命中的资料片段，不调用聊天 API，也不生成结论。切换到“对话助手”后，才使用配置的聊天模型。回答依据可以展开查看，完整对话与来源可以导出为 Markdown。
 
-> “美术外包的交付物反复返工，验收标准应该先定哪些？”
+## 快速运行
 
-它提供的是供讨论和判断参考的设计资料，不替项目做最终决策。只有本地资料不足，或问题需要最新公开信息时，才会考虑联网搜索。
-
-## 工作方式
-
-```mermaid
-flowchart LR
-    U["问题"] --> R["判断需要哪类资料"]
-    R -->|"游戏设计问题"| K["本地游戏知识索引"]
-    R -->|"本地文件或笔记"| F["文件读取与关键词搜索"]
-    R -->|"资料不足或需要最新信息"| W["联网搜索（可选）"]
-    K --> L["对话模型组织回答"]
-    F --> L
-    W --> L
-```
-
-默认检索使用本地 BGE 模型进行语义召回，并用 BM25 补充精确术语、公式名和专有名词。两路候选通过 reciprocal-rank fusion (RRF) 合并排序。最终证据仍需达到 BGE 相似度下限，因此关键词命中不能绕过游戏领域相关性判断。每次检索会按知识块去重，并限制传入模型的总字符数。相似度不足时，系统不会把不相关的游戏资料套到问题上；边界结果会结合问题的游戏语境进一步判断。
-
-如果问题明确属于教育、电商、短视频或 SaaS，只是借用了“任务”“关卡”“玩法”等游戏化说法，Agent 不会把本地游戏知识当作行业答案，而会说明只能提供游戏化设计的迁移视角。明确讨论游戏内系统时，仍按游戏问题检索。
-
-对话会保存在本机，可在界面中切换旧会话。会话过长时，早期内容会压缩为摘要供模型理解上下文，原始记录仍保留在本地。
-
-## 跑起来
-
-环境要求：Windows、Python 3.10，以及一个 OpenAI-compatible 聊天模型 API。
+需要 Python 3.10。Windows PowerShell：
 
 ```powershell
 .\scripts\setup.ps1
+.\scripts\run.ps1
 ```
 
-首次安装后，打开根目录的 `.env`，填入聊天模型配置：
+在浏览器打开 `http://127.0.0.1:8501`。没有模型凭据或 BGE 索引时，可选择 BM25 检索；语义路径资源不可用时会明确标注为关键词降级。
+
+要使用 BGE，首次构建索引：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 build_bge_combined_index.py
+```
+
+构建时会下载 `BAAI/bge-small-zh-v1.5`。运行和评估时仅加载本地缓存；修改语料后用 `--overwrite` 重建。生成的索引与模型权重不随 Git 提交。
+
+要使用聊天，在 `.env` 中配置：
 
 ```dotenv
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://your-openai-compatible-endpoint/v1
 LLM_MODEL=your_chat_model
+RETRIEVAL_MODE=bge
 ```
 
-然后构建一次本地索引并启动：
+已有 DeepSeek、Ark 等兼容接口可沿用；不要求 OpenAI 账号。`RETRIEVAL_MODE` 可选 `bge`、`keyword`、`hybrid`，保留 BGE 为默认基线。可选的 `METASO_API_KEY` 启用内置联网搜索；`VISION_*` 为 OCR 指定独立模型。它们均不是本地检索的必要条件。
+
+Linux/macOS 可创建 `.venv`，安装 `requirements.txt`，再运行 `python -m streamlit run UI.py --server.address 127.0.0.1`。本轮实际验收环境为 Windows，其他平台尚未实机验收。
+
+## 架构与取舍
+
+```mermaid
+flowchart LR
+    U[问题] --> UI[Streamlit 对话 / 离线演示]
+    UI --> G[LangGraph 工具编排]
+    UI --> R[本地检索服务]
+    G --> R
+    R --> D[领域判断]
+    D --> B[BGE 全量余弦扫描]
+    D --> K[BM25 倒排检索]
+    B --> F[可选 RRF 融合]
+    K --> F
+    G --> L[兼容 API 聊天模型]
+    G --> S[SQLite 历史与摘要]
+    R --> E[真实来源与片段]
+    E --> UI
+```
+
+| 位置 | 职责 |
+| --- | --- |
+| `Agent.py` | 兼容入口、工具注册、LangGraph 状态与上下文管理 |
+| `game_agent/` | 配置、提示词、本地文件访问、来源核验及展示 |
+| `wiki_corpus/retrieval.py` | 独立检索服务、阈值与显式降级 |
+| `wiki_corpus/hybrid_search.py` | 中英文词项 BM25、RRF 排名融合 |
+| `conversation_*.py` | 本地会话目录、摘要及完整轮次的输入预算 |
+| `scripts/doctor.py` | 只读环境诊断，凭据仅报告存在状态 |
+| `scripts/evaluate_retrieval.py` | 离线检索评估与 JSON/Markdown 报告 |
+| `tests/` | 离线功能回归、图恢复、评估和界面交互 |
+
+当前数据规模下使用内存矩阵扫描，便于复现和检查排序。向量在进程中缓存并预先归一化；BM25 的倒排索引按需构建。融合分数、词项分数和余弦相似度分别保存，不能把它们混作正确率。架构细节见 [说明](docs/architecture.md)。
+
+## 验证与实验
 
 ```powershell
-.\.venv\Scripts\python.exe build_bge_combined_index.py
-.\scripts\run.ps1
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\scripts\verify.ps1
+.\.venv\Scripts\python.exe -X utf8 scripts/evaluate_retrieval.py --backend all --top-k 5 --output .runtime/retrieval_evaluation.json
 ```
 
-启动成功后，在浏览器打开 `http://localhost:8501`。之后通常只需要执行第二条命令。
+单元测试使用临时数据库、占位凭据并阻止网络连接，不写入个人会话。本轮本地及无私有配置／索引的干净副本均通过 98 项测试。CI 安装最小测试依赖，不下载 BGE 权重；远程运行结果见 [GitHub Actions](https://github.com/Ryuuson/Game-knowledge-agent/actions)。评估与生成回答分开进行，评估不需要任何 API Key；BGE/混合路径如果发生降级，整组评估判失败并隐藏均值。
 
-首次构建会下载 BGE 模型并生成 SQLite 索引，所需时间取决于网络和机器性能。索引不随 Git 提交。修改语料后可重新构建：
+本轮评估共 **40 条 AI 辅助构造回归案例**：30 条正例覆盖六个来源，10 条非游戏边界问题。案例和证据经过程序核对，但**未经独立人工相关性审核，也不是盲测**。标签只列出选定的支持块，未穷举所有等价证据。以下数字是该回归集上的标注块召回，不能解释为回答准确率。
+
+| 策略 | 排名 Recall@5 | 阈值后 Recall@5 | 阈值后非游戏拒答 | 游戏问题误拒 |
+| --- | ---: | ---: | ---: | ---: |
+| BGE | 46.7% | 40.0% | 10/10 | 4/30 |
+| BM25 | 70.0% | 70.0%（没有语义阈值） | 8/10 | 0/30 |
+| BGE + BM25 / RRF | 63.3% | 48.3% | 10/10 | 4/30 |
+
+关键词在这组案例中召回更多标注块，但会给两个非游戏问题返回资料；混合策略改善部分召回，同时增加延迟与索引内存。保留三种路径供比较，不据小样本结果宣称普遍优于其他系统。结果、失败案例及测量口径见 [实验报告](docs/experiments.md)，评估集定义见 [evals](evals/README.md)。
+
+真实聊天与检索排名需要分别验收。以下命令会向已配置的聊天服务发送两个固定问题，只允许本地检索工具，使用独立临时历史；报告写入本机：
 
 ```powershell
-.\.venv\Scripts\python.exe build_bge_combined_index.py --overwrite
+.\.venv\Scripts\python.exe -X utf8 scripts/smoke_chat.py --live
 ```
 
-## 配置
+它只验证短对话链路，不代替人工核对回答的事实支持程度。
 
-| 配置                                                  | 是否需要 | 用途                                                         |
-| ----------------------------------------------------- | -------- | ------------------------------------------------------------ |
-| `LLM_API_KEY`                                       | 是       | 聊天模型的 API Key                                           |
-| `LLM_BASE_URL`                                      | 是       | OpenAI-compatible 接口地址                                   |
-| `LLM_MODEL`                                         | 是       | 聊天模型名称                                                 |
-| `RAG_BACKEND=bge`                                   | 否       | 默认值。本地 BGE 检索，不需要 embedding API                  |
-| `RAG_DENSE_CANDIDATES` / `RAG_LEXICAL_CANDIDATES` | 否       | 两路召回的候选数，默认各 20                                  |
-| `RAG_RRF_K`                                         | 否       | RRF 融合常数，默认 60                                        |
-| `RAG_DENSE_RRF_WEIGHT` / `RAG_LEXICAL_RRF_WEIGHT` | 否       | BGE 与 BM25 的融合权重，默认`1.0 / 0.25`，保持语义排序主导 |
-| `RAG_EVIDENCE_CHAR_BUDGET`                          | 否       | 单次传给对话模型的检索证据总字符上限，默认 9,000             |
-| `METASO_API_KEY`                                    | 否       | 当前内置联网搜索适配器的凭据                                 |
-| `VISION_*`                                          | 否       | 为图片文字识别指定单独的视觉模型                             |
+## 资料、隐私与边界
 
-聊天模型通过 `LLM_*` 配置，接口需兼容 OpenAI Chat Completions。若 OCR 使用单独的视觉模型，可配置 `VISION_*`。
+知识块、向量和会话保存在本机；聊天会将问题、必要上下文和检索片段发送给已配置的服务。联网搜索与 OCR 使用各自接口。程序面向本地单用户，启动脚本只监听 `127.0.0.1`。
 
-## 知识库
+来源编号由实际检索结果保存，未知编号会被标记。编号对应正确不代表结论必然被原文支持；资料本身也可能有时效或质量问题。BGE 的 0.62/0.67 阈值沿用既有设置，本轮没有用回归集重新调参。摘要失败时仍限制模型输入，完整历史保留。
 
-知识库来自公开资料。下表中的数字是进入索引的知识块数量，不是仓库文件数量：
+原始 JSONL 中部分来源的许可证字段为 `TBD` 或 `Not specified by source`，部分没有有效行号或上游版本。实际统计及来源声明见 [语料核对](docs/corpus-provenance.md)。对外展示可优先提供程序、评估和必要片段；语料再分发需要进一步核对各来源授权。
 
-| 来源                                                                                           | 侧重点                               | 知识块 |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------ | -----: |
-| [Being09/game-design-wiki](https://github.com/Being09/game-design-wiki)                         | 游戏设计方法与机制资料               |    712 |
-| [diedie23/Game-Knowledge-Base](https://diedie23.github.io/Game-Knowledge-Base/)                 | 制作流程、美术管线、外包、排期与验收 |    621 |
-| [Thaelith/open-game-mechanics-dataset](https://github.com/Thaelith/open-game-mechanics-dataset) | 结构化游戏机制与参数                 |  2,676 |
-| [lsc1414/Game_Num_Basics_And_Calc](https://github.com/lsc1414/Game_Num_Basics_And_Calc)         | 中文数值设计与计算                   |  1,809 |
-| [zsc/gamedev_at_home](https://github.com/zsc/gamedev_at_home)                                   | HTML5 游戏开发教程                   |    609 |
-| [tigermkiiiddd/senior-game-designer](https://github.com/tigermkiiiddd/senior-game-designer)     | 策划思维与工作方法                   |     88 |
+本地私有资料、凭据、笔记、模型缓存与运行日志均不应提交；`.gitignore` 保留这些边界，新增测试与公开文档可以正常纳入版本管理。
 
-已切分的语料保存在两个文件中：
+## 项目展示
 
-- `data/game_knowledge_chunks.jsonl`：前两个来源，共 1,333 个知识块。
-- `data/new_knowledge_chunks.jsonl`：后四个来源，共 5,182 个知识块。
+- [三分钟演示脚本](docs/demo.md)
+- [个人贡献边界与项目经历草案](docs/project-experience.md)
+- [验证记录](docs/verification.md)
 
-`build_bge_combined_index.py` 会合并它们，得到 6,515 个向量并写入本地 SQLite 索引。查询时也必须使用同一个 BGE 编码器。
-
-不要混用不同 embedding 模型生成的索引和查询编码器。索引必须由当前查询使用的同一模型生成，因为不同模型的向量空间并不兼容。
-
-当前查询在进程内做全量余弦扫描：首次加载时会把全部向量读入内存并缓存，之后每次查询进行一次矩阵相似度计算。对 6,515 个知识块来说，这个做法足够。若语料预计超过约 10 万知识块，或单次检索延迟变得不可接受，再考虑使用 ANN 索引，例如 FAISS 或 HNSW。
-
-### 检索评测
-
-`scripts/evaluate_rag.py` 用同一份本地索引比较纯 BGE 与混合检索在不同阈值下的路由行为。题集必须提供 `id`、`question` 和可选的 `type` 字段，可使用 JSONL、包含 `results` 的 JSON，或包含 `cases` 的金标 JSON：
-
-```powershell
-.\.venv\Scripts\python.exe scripts\evaluate_rag.py .\evals\routing_cases.jsonl --output .\data\rag-routing-report.json
-```
-
-报告按 `type` 统计高相关、待确认和拒绝的比例，并保留每题标题，便于人工抽检。这不等于召回正确率或回答质量。调整阈值前，仍应人工确认正例是否真的支持问题，以及负例是否被错误放行。
-
-`evals/rag_hybrid_regression_v1.json` 是已人工审阅的回归集。它用“证据组”表达某个问题必须覆盖的知识，而非固定某一条绝对排名；报告中的 `expectation_evaluation` 会显示 BGE 和混合检索各自的通过数与失败项。
-
-## 本地与联网
-
-知识块、BGE 模型、向量索引和会话记录都保留在本机。聊天回答仍会调用 `.env` 中配置的模型 API，发送给模型的是当前问题和必要的上下文。
-
-联网搜索默认关闭。当前内置适配器使用 Metaso。配置 `METASO_API_KEY` 后，Agent 才会在本地资料不足或问题需要最新公开信息时联网搜索。使用联网搜索的回答会明确说明这一点，并附上工具实际返回的 2 到 3 条参考链接。
-
-Ark 和 Metaso 都不是项目的必要依赖。Ark 只是保留的个人检索配置示例，默认的 BGE 检索不依赖它。若团队已有其他 embedding 服务，可以接入该服务并重建匹配的索引。
-
-Metaso 也可以替换为 Tavily、SerpAPI 或团队已有的搜索服务。当前代码只内置了 Metaso 适配器，因此替换搜索服务需要实现或改写联网搜索工具，不是只把 `TAVILY_API_KEY` 写入 `.env`。这不会影响本地知识库检索。
-
-## 项目结构
-
-```text
-Agent.py                       Agent 与工具路由
-UI.py                          Streamlit 对话界面
-build_bge_combined_index.py    BGE 索引构建脚本
-conversation_*.py              会话保存与上下文压缩
-data/                          已切分的游戏知识语料
-wiki_corpus/                   检索、向量索引和领域判断
-scripts/setup.ps1              安装环境
-scripts/run.ps1                启动界面
-```
-
-## 常见情况
-
-**启动时提示找不到 BGE 索引**
-
-先运行 `build_bge_combined_index.py`。新克隆的项目不包含生成好的 SQLite 索引。
-
-**不配置作者使用的 Ark 或 Metaso 可以运行吗？**
-
-可以。默认的 BGE 检索在本地运行；Ark 是可选检索配置，Metaso 是可替换的联网搜索适配器。聊天模型仍需要你自己的 OpenAI-compatible API。
-
-**这是不是一个完全离线的应用？**
-
-不是。检索可以完全本地运行，但对话回答使用你配置的聊天模型 API。若不配置搜索适配器的凭据，就不会使用联网搜索。
+已有底座、本轮 AI 辅助收尾、本人实际完成的工作分别说明。项目经历只使用已验证结果和能亲自解释的贡献，不把公开语料数量当成算法效果或独立开发成果。

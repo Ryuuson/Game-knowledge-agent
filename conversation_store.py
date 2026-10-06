@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,6 +42,7 @@ class ConversationStore:
 
     def __init__(self, database_path: Path | str) -> None:
         self.database_path = Path(database_path)
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._create_schema()
 
     def register(self, thread_id: str, title: str) -> None:
@@ -180,12 +180,7 @@ class ConversationStore:
         return row is not None
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.database_path)
-        try:
-            os.chmod(self.database_path, 0o600)
-        except OSError:
-            pass
-        return connection
+        return sqlite3.connect(self.database_path)
 
     @staticmethod
     def _timestamp() -> str:

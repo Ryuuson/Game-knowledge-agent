@@ -1,32 +1,10 @@
 $ErrorActionPreference = "Stop"
-
-$root = Split-Path -Parent $PSScriptRoot
-Set-Location $root
-$python = Join-Path $root ".venv\Scripts\python.exe"
-
-if (-not (Test-Path $python)) {
+$projectRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $projectRoot
+$projectPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
+if (-not (Test-Path -LiteralPath $projectPython)) {
     throw "Virtual environment is missing. Run .\scripts\setup.ps1 first."
 }
-if (-not (Test-Path ".env")) {
-    throw ".env is missing. Copy .env.example to .env and configure a chat model first."
-}
-
-$ragBackend = $env:RAG_BACKEND
-if (-not $ragBackend) {
-    $backendLine = Get-Content ".env" | Where-Object { $_ -match "^\s*RAG_BACKEND\s*=" } | Select-Object -First 1
-    if ($backendLine) {
-        $ragBackend = ($backendLine -split "=", 2)[1].Trim()
-    }
-}
-if (-not $ragBackend) {
-    $ragBackend = "bge"
-}
-
-if ($ragBackend.ToLower() -eq "bge") {
-    $index = Join-Path $root "data\game_knowledge_bge_combined_index.sqlite"
-    if (-not (Test-Path $index)) {
-        throw "The BGE index is missing. Run .\.venv\Scripts\python.exe build_bge_combined_index.py first."
-    }
-}
-
-& $python -m streamlit run UI.py
+# The app can demonstrate keyword retrieval without credentials or a BGE index.
+& $projectPython -m streamlit run UI.py --server.address 127.0.0.1 --server.port 8501 --server.headless true --browser.gatherUsageStats false
+if ($LASTEXITCODE -ne 0) { throw "Streamlit exited with code $LASTEXITCODE" }

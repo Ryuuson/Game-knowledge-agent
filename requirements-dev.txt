@@ -1,0 +1,2 @@
+# Unit tests only; install application dependencies separately.
+pytest==9.1.1

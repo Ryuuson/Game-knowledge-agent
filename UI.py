@@ -1,187 +1,185 @@
-import streamlit as st
-from Agent import graph, create_config, TOOL_START_MSGS, TOOL_END_MSGS, DEFAULT_START, DEFAULT_END
-from conversation_store import (
-    ConversationStore,
-    LEGACY_TITLE,
-    title_from_first_prompt,
-)
-from conversation_context import remove_internal_summary
-from langchain_core.messages import AIMessage, HumanMessage, AIMessageChunk, ToolMessage
+"""Local Streamlit application: grounded chat and an API-free retrieval demo."""
+
+from importlib import import_module
+from time import perf_counter
 from uuid import uuid4
-from pathlib import Path
-from security import MAX_PROMPT_CHARS, input_guardrail, redact_sensitive_output
 
-st.set_page_config(page_title="游戏知识 Agent", page_icon="🎮")
-st.title("🎮 游戏知识 Agent")
-st.caption("基于游戏设计知识库的智能顾问")
+import streamlit as st
+from dotenv import load_dotenv
 
+from conversation_store import ConversationStore, title_from_first_prompt
+from game_agent.presentation import export_markdown, visible_history
+from game_agent.settings import ROOT, Settings
+from wiki_corpus.retrieval import RetrievalService
 
-def _new_thread_id() -> str:
-    return f"web_{uuid4().hex}"
-
-
-def _restore_messages(thread_id: str) -> list[dict[str, str]]:
-    """Read the visible chat messages from LangGraph's persisted state."""
-    state = graph.get_state(create_config(thread_id))
-    restored = []
-    for message in state.values.get("messages", []):
-        if isinstance(message, HumanMessage) and isinstance(message.content, str):
-            restored.append({"role": "user", "content": message.content})
-        elif isinstance(message, AIMessage) and isinstance(message.content, str):
-            if message.content.strip():
-                restored.append({"role": "assistant", "content": message.content})
-    return restored
+load_dotenv(ROOT / ".env")
+settings = Settings.from_env()
+st.set_page_config(page_title="游戏知识助手", page_icon="🎮", layout="wide")
 
 
-def _start_new_conversation() -> None:
-    st.session_state.thread_id = _new_thread_id()
+@st.cache_resource
+def runtime():
+    return import_module("Agent")
+
+
+@st.cache_resource
+def retriever(mode):
+    return RetrievalService(mode=mode)
+
+
+@st.cache_resource
+def store():
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    return ConversationStore(settings.database_path)
+
+
+def new_chat():
+    st.session_state.thread_id = f"web_{uuid4().hex}"
     st.session_state.messages = []
 
 
-conversation_store = ConversationStore(Path(__file__).with_name("agent_memory.sqlite"))
+def render_evidence(retrievals):
+    if not retrievals:
+        return
+    with st.expander("查看检索依据"):
+        for result in retrievals:
+            label = {"bge": "语义检索", "keyword": "关键词检索", "hybrid": "混合检索"}.get(result["mode"], result["mode"])
+            status = {"high_confidence": "高相关", "ambiguous": "需要核对语境", "keyword_only": "关键词候选",
+                      "no_evidence": "无可用依据", "out_of_domain": "非游戏领域"}.get(result["status"], result["status"])
+            st.caption(f"{label} · {status} · {result.get('elapsed_ms', 0):.0f} ms")
+            if result.get("reused_from_prior_turn"):
+                st.caption("本次回答引用了此前对话中检索到的资料。")
+            if result.get("fallback"):
+                st.info("语义服务暂不可用，以下为关键词候选。")
+            for hit in result.get("hits", []):
+                st.markdown(f"**{hit.get('title', '未命名资料')}**")
+                st.caption(f"来源编号：{hit['chunk_id']} · {hit.get('collection_label', '')} · {hit.get('section_path') or '文章开头'}")
+                source = str(hit.get("source_url", ""))
+                if source.startswith(("https://", "http://")):
+                    st.link_button("打开原始资料", source)
+                else:
+                    st.caption(f"资料标识：{source}")
+                st.text(str(hit.get("text", ""))[:2400])
 
-# ---------- session state 初始化 ----------
+
+def render_message(message):
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        render_evidence(message.get("retrievals", []))
+        usage = message.get("usage", {})
+        if usage.get("total_tokens"):
+            st.caption(f"最终回答请求使用 {usage['total_tokens']} tokens（不含工具前轮及摘要请求）")
+
+
 if "thread_id" not in st.session_state:
-    st.session_state.thread_id = _new_thread_id()
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    new_chat()
 
-# 当前会话的 config
-config = create_config(st.session_state.thread_id)
+st.title("🎮 游戏知识助手")
+st.caption("从游戏设计资料中查找依据，讨论机制、数值、经济系统与制作流程。")
 
-# ---------- 侧边栏 ----------
 with st.sidebar:
-    st.markdown("### 游戏设计知识库")
-    st.caption("检索游戏机制、系统设计与设计方法。")
-    st.divider()
-    st.markdown("### 会话管理")
-    if st.button("新建会话", use_container_width=True):
-        _start_new_conversation()
-        st.rerun()
-
-    conversations = conversation_store.list_conversations()
-    for conversation in conversations:
-        if conversation.title != LEGACY_TITLE:
-            continue
-        restored = _restore_messages(conversation.thread_id)
-        first_prompt = next(
-            (message["content"] for message in restored if message["role"] == "user"),
-            "",
-        )
-        if first_prompt:
-            conversation_store.rename(
-                conversation.thread_id, title_from_first_prompt(first_prompt)
-            )
-    conversations = conversation_store.list_conversations()
-    if conversations:
-        st.caption("历史会话")
-        for conversation in conversations:
-            open_column, delete_column = st.columns([5, 1])
-            is_active = conversation.thread_id == st.session_state.thread_id
-            button_type = "primary" if is_active else "secondary"
-            if open_column.button(
-                conversation.title,
-                key=f"open_{conversation.thread_id}",
-                type=button_type,
-                use_container_width=True,
-            ):
-                restored = _restore_messages(conversation.thread_id)
+    mode = st.radio("使用方式", ["对话助手", "离线检索演示"], index=1)
+    st.caption("本地单用户应用。对话会调用已配置的聊天模型；离线演示只检索本机资料。")
+    if mode == "对话助手":
+        if st.button("新建会话", use_container_width=True):
+            new_chat()
+            st.rerun()
+        for conversation in store().list_conversations():
+            open_col, delete_col = st.columns([5, 1])
+            if open_col.button(conversation.title, key=f"open_{conversation.thread_id}", use_container_width=True,
+                               type="primary" if conversation.thread_id == st.session_state.thread_id else "secondary"):
+                app = runtime()
+                snapshot = app.graph.get_state(app.create_config(conversation.thread_id))
                 st.session_state.thread_id = conversation.thread_id
-                st.session_state.messages = restored
+                st.session_state.messages = visible_history(snapshot.values.get("messages", []))
                 st.rerun()
-            if delete_column.button("删除", key=f"delete_{conversation.thread_id}"):
-                conversation_store.delete(conversation.thread_id)
-                if is_active:
-                    _start_new_conversation()
+            if delete_col.button("删除", key=f"delete_{conversation.thread_id}"):
+                store().delete(conversation.thread_id)
+                if conversation.thread_id == st.session_state.thread_id:
+                    new_chat()
                 st.rerun()
-    else:
-        st.caption("还没有历史会话")
+        if st.session_state.messages:
+            st.download_button("导出对话与来源", export_markdown(st.session_state.messages),
+                               file_name="game-knowledge-conversation.md", mime="text/markdown")
 
-# ---------- 渲染历史消息 ----------
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+if mode == "离线检索演示":
+    st.info("此模式不调用聊天模型。下面展示检索到的原始片段，不生成设计结论。")
+    search_mode = st.selectbox("检索方式", ["bge", "keyword", "hybrid"],
+                              format_func=lambda x: {"bge": "BGE 语义检索", "keyword": "BM25 关键词检索", "hybrid": "BGE + BM25 混合检索"}[x])
+    query = st.text_input("游戏设计问题", value="玩家在游戏后期金币越来越多，经济系统应该怎么设计回收机制？")
+    top_k = st.slider("展示片段数", 1, 10, 3)
+    if st.button("检索本地知识库", type="primary"):
+        try:
+            with st.spinner("正在检索本地资料…"):
+                result = retriever(search_mode).search(query, top_k=top_k)
+            st.session_state.demo_result = result.to_dict()
+        except Exception:
+            st.session_state.pop("demo_result", None)
+            st.error("无法检索，请运行 scripts/doctor.py 检查语料、索引和本地模型。")
+    if "demo_result" in st.session_state:
+        result = st.session_state.demo_result
+        st.caption(f"问题：{result['query']}")
+        if result["status"] == "out_of_domain":
+            st.warning("该问题明确属于其他行业，本地游戏资料不适用。")
+        elif not result["hits"]:
+            st.warning("没有找到足够相关的资料，请补充游戏语境或调整问题。")
+        render_evidence([result])
+else:
+    if not settings.chat_ready:
+        st.warning("聊天模型尚未配置。请按 README 配置 LLM_*，或切换到离线检索演示。")
+    for message in st.session_state.messages:
+        render_message(message)
 
-# ---------- 用户输入 ----------
-if prompt := st.chat_input("例如：如何设计游戏的经济系统？", max_chars=MAX_PROMPT_CHARS):
-    is_safe, prompt_or_reason = input_guardrail(prompt)
-    if not is_safe:
-        st.error(prompt_or_reason)
-        st.stop()
-    prompt = prompt_or_reason
-    if not st.session_state.messages:
-        conversation_store.register(
-            st.session_state.thread_id,
-            title_from_first_prompt(prompt),
-        )
-    else:
-        conversation_store.touch(st.session_state.thread_id)
+    if prompt := st.chat_input("例如：技能伤害和冷却如何搭配，才不容易出现唯一解？", disabled=not settings.chat_ready):
+        if len(prompt) > settings.max_input_chars:
+            st.error("问题超过 6000 字符，请缩短后发送。")
+            st.stop()
+        app = runtime()
+        from langchain_core.messages import AIMessageChunk, HumanMessage, ToolMessage
 
-    # 记录并显示用户消息
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # 准备调用图
-    input_state = {"messages": [HumanMessage(content=prompt)]}
-    summary_before = conversation_store.get_summary(st.session_state.thread_id)
-    covered_before = summary_before.covered_message_count if summary_before else 0
-
-    with st.chat_message("assistant"):
-        reply_box = st.empty()
-        status_box = st.empty()
-        pending_text = ""
-        shown_tool_calls = set()
-        active_tool_calls = {}
-        tool_turn_in_progress = False
-
-        # 流式执行
-        for chunk, metadata in graph.stream(
-            input_state,
-            config=config,
-            stream_mode="messages"
-        ):
-            # 工具调用开始
-            if isinstance(chunk, AIMessageChunk) and chunk.tool_call_chunks:
-                for tc in chunk.tool_call_chunks:
-                    tc_id = tc.get("id")
-                    tc_name = tc.get("name", "")
-                    if tc_id and tc_id not in shown_tool_calls:
-                        # 工具调用前的自然语言前言属于内部过程，不纳入最终回复。
+        thread_id = st.session_state.thread_id
+        if not st.session_state.messages:
+            store().register(thread_id, title_from_first_prompt(prompt))
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.chat_message("assistant"):
+            reply_box, status_box = st.empty(), st.empty()
+            pending_text = ""
+            tool_turn = False
+            started = perf_counter()
+            try:
+                for chunk, metadata in app.graph.stream({"messages": [HumanMessage(content=prompt)]},
+                                                        config=app.create_config(thread_id), stream_mode="messages"):
+                    if "internal_summary" in metadata.get("tags", []):
+                        continue
+                    if isinstance(chunk, AIMessageChunk) and chunk.tool_call_chunks:
+                        tool_turn = True
                         pending_text = ""
-                        tool_turn_in_progress = True
-                        shown_tool_calls.add(tc_id)
-                        active_tool_calls[tc_id] = tc_name or "未知"
-                        start_msg = TOOL_START_MSGS.get(tc_name, DEFAULT_START)
-                        status_box.info(f"🔧 {start_msg}")
-
-            # 工具调用结束
-            if isinstance(chunk, ToolMessage):
-                tc_id = chunk.tool_call_id
-                if tc_id in active_tool_calls:
-                    tool_name = active_tool_calls.pop(tc_id)
-                    end_msg = TOOL_END_MSGS.get(tool_name, DEFAULT_END)
-                    status_box.success(f"✨ {end_msg}")
-                if not active_tool_calls:
-                    tool_turn_in_progress = False
-
-            # 只保留最终助手回合；一旦检测到工具调用，上方会丢弃该回合文本。
-            if (
-                isinstance(chunk, AIMessageChunk)
-                and chunk.content
-                and not tool_turn_in_progress
-            ):
-                pending_text += chunk.content
-
-        # 模型若意外复述内部摘要，绝不把它显示或保存到聊天记录。
-        stored_summary = conversation_store.get_summary(st.session_state.thread_id)
-        summary_text = stored_summary.summary if stored_summary else ""
-        full_text = redact_sensitive_output(remove_internal_summary(pending_text, summary_text))
-        reply_box.markdown(full_text)
-        status_box.empty()  # 清除工具状态
-        if stored_summary and stored_summary.covered_message_count > covered_before:
-            st.caption("本轮已压缩较早的对话上下文，完整历史仍保留在此会话中。")
-
-    # 保存助手回复
-    st.session_state.messages.append({"role": "assistant", "content": full_text})
-    conversation_store.touch(st.session_state.thread_id)
+                        reply_box.empty()
+                        for call in chunk.tool_call_chunks:
+                            if call.get("name"):
+                                status_box.info(app.TOOL_START_MSGS.get(call["name"], app.DEFAULT_START))
+                    elif isinstance(chunk, ToolMessage):
+                        tool_turn = False
+                        status_box.info(app.TOOL_END_MSGS.get(chunk.name, app.DEFAULT_END))
+                    elif isinstance(chunk, AIMessageChunk) and isinstance(chunk.content, str) and not tool_turn:
+                        pending_text += chunk.content
+                        reply_box.markdown(pending_text)
+                snapshot = app.graph.get_state(app.create_config(thread_id))
+                st.session_state.messages = visible_history(snapshot.values.get("messages", []))
+                final = st.session_state.messages[-1] if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" else None
+                if final is None:
+                    raise RuntimeError("empty_reply")
+                reply_box.markdown(final["content"])
+                status_box.empty()
+                render_evidence(final.get("retrievals", []))
+                st.caption(f"本轮耗时 {perf_counter() - started:.1f} 秒")
+                store().touch(thread_id)
+            except Exception:
+                reply_box.empty()
+                status_box.empty()
+                # Recover the persisted user turn, so the next submit cannot
+                # overwrite the title or hide the failed request in the UI.
+                snapshot = app.graph.get_state(app.create_config(thread_id))
+                st.session_state.messages = visible_history(snapshot.values.get("messages", []))
+                st.error("本轮未完成。请检查模型配置、网络或运行 scripts/doctor.py 后重试；已有历史仍保留。")
