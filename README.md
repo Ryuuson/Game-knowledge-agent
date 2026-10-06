@@ -1,6 +1,6 @@
 # 游戏知识助手
 
-一个面向游戏设计资料的本地知识助手，用于查找机制、数值、经济系统与制作流程的依据，并延续同一个设计问题的讨论。本项目作为跨领域工程实践，重点是需求分解、系统实现、实验对比和结果验证。
+一个面向游戏设计资料的本地知识助手，用于查找机制、数值、经济系统与制作流程的依据，并延续同一个设计问题的讨论。
 
 已有知识库包含 **6 个公开来源、6,515 个知识块**。支持 BGE 语义检索、BM25 关键词检索、RRF 混合检索，以及带原始来源的聊天历史。系统提供参考资料和设计建议，回答仍需结合具体项目判断。
 
@@ -42,7 +42,7 @@ RETRIEVAL_MODE=bge
 
 已有 DeepSeek、Ark 等兼容接口可沿用；不要求 OpenAI 账号。`RETRIEVAL_MODE` 可选 `bge`、`keyword`、`hybrid`，保留 BGE 为默认基线。可选的 `METASO_API_KEY` 启用内置联网搜索；`VISION_*` 为 OCR 指定独立模型。它们均不是本地检索的必要条件。
 
-Linux/macOS 可创建 `.venv`，安装 `requirements.txt`，再运行 `python -m streamlit run UI.py --server.address 127.0.0.1`。本轮实际验收环境为 Windows，其他平台尚未实机验收。
+Linux/macOS 可创建 `.venv`，安装 `requirements.txt`，再运行 `python -m streamlit run UI.py --server.address 127.0.0.1`。本地检索与浏览器验证在 Windows 完成，Linux 离线测试由 GitHub Actions 执行；macOS 尚未验证。
 
 ## 架构与取舍
 
@@ -114,10 +114,10 @@ flowchart LR
 
 本地私有资料、凭据、笔记、模型缓存与运行日志均不应提交；`.gitignore` 保留这些边界，新增测试与公开文档可以正常纳入版本管理。
 
-## 项目展示
+## 文档
 
 - [三分钟演示脚本](docs/demo.md)
-- [个人贡献边界与项目经历草案](docs/project-experience.md)
+- [架构与适用边界](docs/architecture.md)
+- [检索实验报告](docs/experiments.md)
+- [语料来源与字段核对](docs/corpus-provenance.md)
 - [验证记录](docs/verification.md)
-
-已有底座、本轮 AI 辅助收尾、本人实际完成的工作分别说明。项目经历只使用已验证结果和能亲自解释的贡献，不把公开语料数量当成算法效果或独立开发成果。
