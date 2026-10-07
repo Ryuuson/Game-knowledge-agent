@@ -97,14 +97,17 @@ def _local_knowledge_path(hit: dict) -> str | None:
     source = str(hit.get("source_url", ""))
     root_name = LOCAL_DOCUMENT_ROOTS.get(collection)
     prefix = f"{collection}/"
-    if not root_name or not source.startswith(prefix):
+    provenance_path = (hit.get("provenance") or {}).get("source_path")
+    if not root_name or not (provenance_path or source.startswith(prefix)):
         return None
 
-    relative_path = Path(source.removeprefix(prefix))
+    relative_path = Path(provenance_path or source.removeprefix(prefix))
+    if relative_path.is_absolute() or ".." in relative_path.parts or ":" in str(relative_path):
+        return None
     candidate = Path(root_name) / relative_path
     resolved = (KNOWLEDGE_DIR / candidate).resolve()
     if (
-        not resolved.is_relative_to(KNOWLEDGE_DIR.resolve())
+        not resolved.is_relative_to((KNOWLEDGE_DIR / root_name).resolve())
         or resolved.suffix.lower() not in TEXT_SUFFIXES
     ):
         return None

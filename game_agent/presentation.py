@@ -3,6 +3,7 @@
 import re
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from wiki_corpus.provenance import describe_location
 
 
 def validate_citations(text: str, messages) -> tuple[str, list[str]]:
@@ -55,4 +56,5 @@ def export_markdown(messages: list[dict], title: str = "游戏知识助手对话
             parts.append(f"\n检索方式：{retrieval['mode']}；状态：{retrieval['status']}。")
             for hit in retrieval.get("hits", []):
                 parts.append(f"- 来源 `{hit['chunk_id']}`：{hit.get('title', '')}；{hit.get('source_url', '')}")
+                parts.append(f"  定位：{describe_location(hit)}")
     return "\n".join(parts)

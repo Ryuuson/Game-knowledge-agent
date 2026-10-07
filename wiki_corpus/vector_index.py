@@ -26,10 +26,13 @@ def create_schema(connection: sqlite3.Connection) -> None:
             classification_reason TEXT,
             embedding_model TEXT NOT NULL,
             embedding_dimensions INTEGER NOT NULL,
-            embedding BLOB NOT NULL
+            embedding BLOB NOT NULL,
+            provenance TEXT NOT NULL DEFAULT '{}'
         )
         """
     )
+    if "provenance" not in {row[1] for row in connection.execute("PRAGMA table_info(chunks)")}:
+        connection.execute("ALTER TABLE chunks ADD COLUMN provenance TEXT NOT NULL DEFAULT '{}'")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_chunks_title ON chunks(title)")
     connection.commit()
 
@@ -68,6 +71,7 @@ def replace_chunks(
             model_name,
             embedding_dimensions,
             bytes(embedding),
+            json.dumps(chunk.get("provenance", {}), ensure_ascii=False),
         )
         for chunk, embedding in zip(chunks, embeddings)
     ]
@@ -79,8 +83,8 @@ def replace_chunks(
                 chunk_id, title, alternate_titles, source_url, section_path,
                 start_line, end_line, content, dump_date, license, matched_terms,
                 collection_label, classification_reason, embedding_model,
-                embedding_dimensions, embedding
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                embedding_dimensions, embedding, provenance
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )

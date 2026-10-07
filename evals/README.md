@@ -6,7 +6,7 @@
 
 ## 案例与语料核验
 
-每行包含 `case_id`、`query`、`expected_domain`、`expected_chunk_ids`、`source_collections`、`rationale`、`dataset_kind`、`provenance`、`annotation_scope` 与 `evidence`。每个正例 ID 配有语料文件、来源集合、标题、章节、原文行号、来源位置和逐字原文片段。没有可靠行号的导入源可能记录 `0`，HTML 归一化文本可能仅记录 `1`；用 chunk ID 和片段定位，不能将这些行号解释成精确的原始网页行号。
+每行包含 `case_id`、`query`、`expected_domain`、`expected_chunk_ids`、`source_collections`、`rationale`、`dataset_kind`、`provenance`、`annotation_scope` 与 `evidence`。每个正例 ID 配有语料文件、来源集合、标题、章节、来源范围、固定版本链接和语料中的逐字片段。2026-10-07 已同步修复来源元数据；语料的 `provenance.line_scope` 区分匹配片段、结构化 JSON 记录及完整文章，后两种范围不能解释为逐字摘录行，详见 [语料修复记录](../docs/corpus-provenance.md)。
 
 脚本以只读方式打开 SQLite 索引，核对所有索引块与两份 JSONL 语料的 ID 集合、正文和来源字段，并检查每条标注的来源及片段实际存在。默认索引目前包含 6,515 个块。此核验能发现 ID 失效、来源写错、片段虚构或索引陈旧；**不能代替独立人员判断语义相关性**。标签只列出选定的支持块，不保证穷举全部相关块，跨来源也可能存在等价证据。未标注块按不相关计分，因此这些分数可能低估语义检索的实际相关性。商店素材等涉及外部平台的案例只检查已有语料定位，不证明其中要求现在仍有效。
 

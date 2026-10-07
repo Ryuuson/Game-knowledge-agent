@@ -11,6 +11,7 @@ from conversation_store import ConversationStore, title_from_first_prompt
 from game_agent.presentation import export_markdown, visible_history
 from game_agent.settings import ROOT, Settings
 from wiki_corpus.retrieval import RetrievalService
+from wiki_corpus.provenance import describe_location
 
 load_dotenv(ROOT / ".env")
 settings = Settings.from_env()
@@ -59,6 +60,7 @@ def render_evidence(retrievals):
                     st.link_button("打开原始资料", source)
                 else:
                     st.caption(f"资料标识：{source}")
+                st.caption(describe_location(hit))
                 st.text(str(hit.get("text", ""))[:2400])
 
 

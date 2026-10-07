@@ -28,3 +28,13 @@ def test_does_not_offer_json_mechanic_source_to_markdown_reader():
     }
 
     assert _local_knowledge_path(hit) is None
+
+
+def test_pinned_public_source_keeps_local_markdown_access():
+    assert _local_knowledge_path({"collection_label": "game_design_wiki", "source_url": "https://github.com/source",
+                                  "provenance": {"source_path": "wiki/concepts/游戏.md"}}) == "game-design-wiki/wiki/concepts/游戏.md"
+
+
+def test_provenance_cannot_escape_selected_collection():
+    assert _local_knowledge_path({"collection_label": "game_num_basics", "source_url": "https://github.com/source",
+                                  "provenance": {"source_path": "../senior-game-designer/README.md"}}) is None

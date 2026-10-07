@@ -12,12 +12,14 @@ def load_index(
     connection: sqlite3.Connection,
 ) -> tuple[list[dict[str, Any]], np.ndarray, str]:
     """Restore SQLite BLOB embeddings into an in-memory float32 matrix."""
+    has_provenance = "provenance" in {row[1] for row in connection.execute("PRAGMA table_info(chunks)")}
+    provenance_column = "provenance" if has_provenance else "'{}'"
     rows = connection.execute(
-        """
+        f"""
         SELECT chunk_id, title, alternate_titles, source_url, section_path,
                start_line, end_line, content, dump_date, license, matched_terms,
                collection_label, classification_reason, embedding_model,
-               embedding_dimensions, embedding
+               embedding_dimensions, embedding, {provenance_column}
         FROM chunks
         ORDER BY rowid
         """
@@ -53,6 +55,7 @@ def load_index(
                 "matched_terms": json.loads(row[10]),
                 "collection_label": row[11],
                 "classification_reason": row[12],
+                "provenance": json.loads(row[16]),
             }
         )
     return chunks, np.vstack(vectors), model_names.pop()

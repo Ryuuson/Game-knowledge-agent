@@ -29,7 +29,7 @@
 .\.venv\Scripts\python.exe -X utf8 build_bge_combined_index.py
 ```
 
-构建时会下载 `BAAI/bge-small-zh-v1.5`。运行和评估时仅加载本地缓存；修改语料后用 `--overwrite` 重建。生成的索引与模型权重不随 Git 提交。
+构建时会下载 `BAAI/bge-small-zh-v1.5`。运行和评估时仅加载本地缓存；修改正文后用 `--overwrite` 重建。来源元数据可用修复脚本更新并保留原向量，见 [语料修复记录](docs/corpus-provenance.md)。生成的索引与模型权重不随 Git 提交。
 
 要使用聊天，在 `.env` 中配置：
 
@@ -84,7 +84,7 @@ flowchart LR
 .\.venv\Scripts\python.exe -X utf8 scripts/evaluate_retrieval.py --backend all --top-k 5 --output .runtime/retrieval_evaluation.json
 ```
 
-单元测试使用临时数据库、占位凭据并阻止网络连接，不写入个人会话。本轮本地及无私有配置／索引的干净副本均通过 98 项测试。CI 安装最小测试依赖，不下载 BGE 权重；远程运行结果见 [GitHub Actions](https://github.com/Ryuuson/Game-knowledge-agent/actions)。评估与生成回答分开进行，评估不需要任何 API Key；BGE/混合路径如果发生降级，整组评估判失败并隐藏均值。
+单元测试使用临时数据库、占位凭据并阻止网络连接，不写入个人会话。2026-10-07 元数据修复后，本地 119 项测试通过；此前无私有配置／索引的干净副本通过 98 项测试。CI 安装最小测试依赖，不下载 BGE 权重；远程运行结果见 [GitHub Actions](https://github.com/Ryuuson/Game-knowledge-agent/actions)。评估与生成回答分开进行，评估不需要任何 API Key；BGE/混合路径如果发生降级，整组评估判失败并隐藏均值。
 
 本轮评估共 **40 条 AI 辅助构造回归案例**：30 条正例覆盖六个来源，10 条非游戏边界问题。案例和证据经过程序核对，但**未经独立人工相关性审核，也不是盲测**。标签只列出选定的支持块，未穷举所有等价证据。以下数字是该回归集上的标注块召回，不能解释为回答准确率。
 
@@ -110,7 +110,7 @@ flowchart LR
 
 来源编号由实际检索结果保存，未知编号会被标记。编号对应正确不代表结论必然被原文支持；资料本身也可能有时效或质量问题。BGE 的 0.62/0.67 阈值沿用既有设置，本轮没有用回归集重新调参。摘要失败时仍限制模型输入，完整历史保留。
 
-原始 JSONL 中部分来源的许可证字段为 `TBD` 或 `Not specified by source`，部分没有有效行号或上游版本。实际统计及来源声明见 [语料核对](docs/corpus-provenance.md)。对外展示可优先提供程序、评估和必要片段；语料再分发需要进一步核对各来源授权。
+JSONL 已修复来源链接、版本、文件指纹及许可证：MIT 2,609 条、CC0-1.0 2,676 条，另有 1,230 条来源未声明许可证，明确保留未知状态。证据展示区分片段行、JSON 记录与文章范围；17 条片段仍需对照原始文章核实。详情及复核入口见 [语料修复记录](docs/corpus-provenance.md)。
 
 本地私有资料、凭据、笔记、模型缓存与运行日志均不应提交；`.gitignore` 保留这些边界，新增测试与公开文档可以正常纳入版本管理。
 

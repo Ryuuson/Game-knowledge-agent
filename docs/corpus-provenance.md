@@ -1,37 +1,49 @@
-# 语料来源与字段核对
+# 语料来源与修复记录
 
-核对日期：2026-10-06。实际逐行解析 `data/game_knowledge_chunks.jsonl` 与 `data/new_knowledge_chunks.jsonl`，统计 `source_collection`、`collection_label`、`license` 及字段缺失情况；没有访问上游网站、私有资料或会话数据库。下表许可证字符串来自原数据声明，不是本次审查确认的法律结论，也不能据此推断具体使用或再分发已获授权。
+核对与修复日期：2026-10-07。两份公开 JSONL 共 6,515 条，已实际修正来源链接、定位和许可证字段，并同步检索索引与评估标注。块编号、标题、章节、正文及向量保持不变；这次是元数据修复。
 
-## 来源集合与许可证原值
+## 已核实的来源快照与许可证
 
-| 文件 | source_collection（collection_label 同值） | 块数 | license 原值 |
-| --- | --- | ---: | --- |
-| game_knowledge_chunks.jsonl | game_design_wiki | 712 | MIT |
-| game_knowledge_chunks.jsonl | game_knowledge_base | 621 | Not specified by source |
-| new_knowledge_chunks.jsonl | open_game_mechanics_dataset | 2,676 | MIT |
-| new_knowledge_chunks.jsonl | game_num_basics | 1,809 | TBD |
-| new_knowledge_chunks.jsonl | gamedev_at_home | 609 | TBD |
-| new_knowledge_chunks.jsonl | senior_game_designer | 88 | TBD |
+| 来源 | 块数 | 核对的上游提交 | 许可证及证据 |
+| --- | ---: | --- | --- |
+| Being09/game-design-wiki | 712 | `715c2e765402b664e0aad126e26c8fec068493a0` | [MIT，LICENSE](https://github.com/Being09/game-design-wiki/blob/715c2e765402b664e0aad126e26c8fec068493a0/LICENSE) |
+| diedie23/Game-Knowledge-Base | 621 | `4171d38daa61f033015e69e4e477db625155e051` | 核对快照未发现许可证声明 |
+| Thaelith/open-game-mechanics-dataset | 2,676 | `da3b1ce634613f3f5580205e9e6abdbd074d6cca` | [数据为 CC0-1.0，LICENSE](https://github.com/Thaelith/open-game-mechanics-dataset/blob/da3b1ce634613f3f5580205e9e6abdbd074d6cca/LICENSE) |
+| lsc1414/Game_Num_Basics_And_Calc | 1,809 | `7a3b6c23a246ef81d10bde4e7bf555cddfa8274c` | [MIT，LICENSE](https://github.com/lsc1414/Game_Num_Basics_And_Calc/blob/7a3b6c23a246ef81d10bde4e7bf555cddfa8274c/LICENSE) |
+| zsc/gamedev_at_home | 609 | `ad83e2b52e334d75ae317ddda042c098dda5212b` | 核对快照未发现许可证声明 |
+| tigermkiiiddd/senior-game-designer | 88 | `89ee5915f34df9094f977626162a12c2e96cb85d` | [README 声明 MIT](https://github.com/tigermkiiiddd/senior-game-designer/blob/89ee5915f34df9094f977626162a12c2e96cb85d/README.md)，未发现独立 LICENSE 文件 |
 
-第一个文件 1,333 块，第二个文件 5,182 块；总计 6,515 块，`chunk_id` 唯一值也是 6,515。许可证原值合计：MIT 3,388；Not specified by source 621；TBD 2,506。后两类共 3,127 块，表示授权信息尚未明确；TBD 不能当作许可证。
+机制数据原先误标为 MIT，已改为 CC0-1.0；上游区分数据许可证与工具脚本的 MIT 许可证。数值资料和高级设计资料的 TBD 已改为有原文证据的 MIT。合计 MIT 2,609 条、CC0-1.0 2,676 条、未声明 1,230 条。
 
-集合对应的上游项目名称取自仓库 README：Being09/game-design-wiki、diedie23/Game-Knowledge-Base、Thaelith/open-game-mechanics-dataset、lsc1414/Game_Num_Basics_And_Calc、zsc/gamedev_at_home、tigermkiiiddd/senior-game-designer。本次没有独立核验它们的许可证、权利归属或当前版本。
+未声明的记录使用 `license: null`，同时保存 `provenance.license.status: not_declared`。有声明的记录保存 SPDX 值、声明类型、固定版本证据 URL 和证据 SHA-256。未声明不是一种许可证，不能通过填字符串推定授权。
 
-## 缺失、空值与占位值
+## 实际修复的字段
 
-两个文件的每条记录都有这 13 个顶层字段：`chunk_id`、`title`、`alternate_titles`、`source_url`、`section_path`、`start_line`、`end_line`、`text`、`license`、`matched_terms`、`collection_label`、`classification_reason`、`source_collection`。逐字段检查均为：键缺失 0、null 0、空字符串 0。字段存在不意味着信息完整或正确。
+| 项目 | 修复结果 |
+| --- | --- |
+| 5,894 条相对路径、621 条站点首页 | 6,515 条均改为具体来源文件的 GitHub 固定版本链接，含来源范围 |
+| 原来 5,182 条 0/0 行号 | 换为可核实的片段行或明确的 JSON 记录／文章范围 |
+| 来源版本与文件指纹 | 每条保存仓库、40 位提交、文件路径及 SHA-256；文件内容与提交的 Git blob 校验一致 |
+| 许可证错误与 TBD | 更正为 MIT／CC0-1.0；确实未声明的来源保存明确状态 |
+| 评估标注和实际索引 | 41 个标注块的链接／范围同步修复；五个现有索引更新元数据，向量指纹不变 |
 
-| 核对项 | game_knowledge_chunks.jsonl | new_knowledge_chunks.jsonl |
-| --- | ---: | ---: |
-| alternate_titles 为空列表 | 1,333 | 2,506 |
-| matched_terms 为空列表 | 833 | 2,506 |
-| start_line/end_line 同为 0 | 0 | 5,182 |
-| source_url 不以 http:// 或 https:// 开头 | 712 | 5,182 |
+界面、工具证据与 Markdown 导出区分三种定位：
 
-空列表表示未提供别名或匹配词，不等于正文缺失。第二个文件的行号全部为 `0/0`，没有可直接使用的原文行范围；不能伪造行号引用。共 5,894 条 `source_url` 是相对路径形式的资料标识，不可直接当网页链接；另外 621 条虽是 HTTP(S) 地址，其可访问性与是否精确定位片段未核验。
+- **3,822 条 matched_text**：896 条逐字匹配，2,373 条忽略空白／BOM 后匹配，553 条另忽略符号、组合及格式标记后匹配。行号属于原始 Markdown 或 HTML，不是切分后文本。重复匹配记录出现次数，链接定位第一处。
+- **2,676 条 json_record**：逐条重建既有结构化字段投影并验证正文一致，定位整条 JSON 记录；中文标签和列表整理不属于逐字摘录。
+- **17 条 document**：确认来源文章，但既有 HTML 片段与快照正文仍有差异，只保存文章范围并标记 `excerpt_not_verified_against_snapshot`。文章范围不能解释成片段精确行号，应通过原始资料核对约束和上下文。
 
-所有记录均未提供 `dump_date`、上游提交版本或抓取时间字段，因此无法从这两个 JSONL 确定来源版本。上述统计不验证来源内容的真实性、切分质量或回答质量。
+空别名和空匹配词列表本身有效，不为凑齐字段生成别名或关键词。历史抓取时间无法追溯，不编造 dump_date；verified_at 是本次核对日期。上表是此次核对的来源快照，不声称已恢复原始抓取提交。
 
-## 使用与复核边界
+## 复核与更新
 
-展示依据时保留集合、标题、章节、来源标识及 chunk_id；HTTP(S) 来源才展示为网页入口。需要对外发布语料、商用或再分发时，应逐来源核对实际版本的许可证文本、署名要求及内容权利；授权未明确的记录需进一步确认。本页不补写未知许可证，也不把“公开可访问”解释成“可以任意使用”。
+[scripts/repair_corpus_metadata.py](../scripts/repair_corpus_metadata.py) 使用 knowledge/ 中已存在的公开来源副本，默认只读计划，不下载资料、不执行上游代码，也不调用模型。目录名与脚本 SOURCES 配置一致；复核本次结果应使用上表提交。
+
+```powershell
+./.venv/Scripts/python.exe -X utf8 scripts/repair_corpus_metadata.py --verified-at 2026-10-07
+./.venv/Scripts/python.exe -X utf8 scripts/repair_corpus_metadata.py --verified-at 2026-10-07 --apply --index data/game_knowledge_bge_combined_index.sqlite
+```
+
+可重复传入 --index 同步其他本地索引。脚本核对 Git blob、来源身份与片段后，备份到 .runtime/metadata-backup-*，在副本上验证索引正文及向量一致性，再替换文件；失败恢复输入。同一来源与核对日期的重复运行结果一致。若正文、标题或章节变化，拒绝以旧向量执行元数据修复，应重新构建索引。
+
+完整修复统计与来源证据见 [结果快照](../evals/reference_results/corpus-metadata-2026-10-07.json)。修复后的检索重新评估，见 [实验报告](experiments.md)；10 月 6 日的快照保留为修复前历史记录。

@@ -91,19 +91,24 @@ def validate_annotations(cases, corpus_paths, index_path):
             corpus[cid], corpus_files[cid] = row, Path(path).resolve()
     uri = Path(index_path).resolve().as_uri() + "?mode=ro"
     with sqlite3.connect(uri, uri=True) as connection:
+        has_provenance = "provenance" in {r[1] for r in connection.execute("PRAGMA table_info(chunks)")}
+        provenance_column = "provenance" if has_provenance else "'{}'"
         index_rows = connection.execute(
             "SELECT chunk_id,title,source_url,section_path,start_line,end_line,content,"
-            "collection_label,embedding_model,embedding_dimensions FROM chunks ORDER BY chunk_id"
+            f"collection_label,embedding_model,embedding_dimensions,license,{provenance_column} FROM chunks ORDER BY chunk_id"
         ).fetchall()
     index = {str(r[0]): dict(zip(("chunk_id", "title", "source_url", "section_path", "start_line",
                                  "end_line", "text", "collection_label", "embedding_model",
-                                 "embedding_dimensions"), r)) for r in index_rows}
+                                 "embedding_dimensions", "license", "provenance"), r)) for r in index_rows}
     if not index or set(corpus) != set(index):
         raise ValueError("index_corpus_id_set_mismatch")
     fields = ("title", "source_url", "section_path", "start_line", "end_line", "text", "collection_label")
     for cid, row in corpus.items():
         if any(row.get(f) != index[cid].get(f) for f in fields):
             raise ValueError("index_corpus_content_mismatch")
+        if (row.get("license") != index[cid]["license"]
+                or row.get("provenance", {}) != json.loads(index[cid]["provenance"])):
+            raise ValueError("index_corpus_provenance_mismatch")
     for case in cases:
         ids = case["expected_chunk_ids"]
         evidence = case.get("evidence", [])
@@ -350,7 +355,7 @@ def build_report(args, *, service_factory=RetrievalService, embedder=None):
                   "device": "cpu", "local_files_only": True, "resolved_thresholds": {},
                   "source_sha256": {name: sha256_file(ROOT / name) for name in (
                       "wiki_corpus/retrieval.py", "wiki_corpus/hybrid_search.py", "wiki_corpus/domain_signals.py",
-                      "wiki_corpus/vector_search.py", "scripts/evaluate_retrieval.py")}}
+                      "wiki_corpus/vector_search.py", "wiki_corpus/provenance.py", "scripts/evaluate_retrieval.py")}}
         report["dataset"] = {"path": str(args.cases.resolve()), "case_count": len(cases),
                              "ranking_case_count": sum(bool(c["expected_chunk_ids"]) for c in cases),
                              "refusal_case_count": sum(not c["expected_chunk_ids"] for c in cases),
