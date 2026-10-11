@@ -35,9 +35,9 @@ CORPUS_FILES = (
 )
 # Fixed public corpus roots; do not walk private directories or list filenames.
 CORPUS_DIRECTORIES = (
-    "knowledge/game-design-wiki", "knowledge/Game-Knowledge-Base",
+    "knowledge/game-design-wiki",
     "knowledge/open-game-mechanics-dataset", "knowledge/Game_Num_Basics_And_Calc",
-    "knowledge/gamedev_at_home", "knowledge/senior-game-designer",
+    "knowledge/senior-game-designer",
 )
 PLACEHOLDERS = {"your_api_key", "your_chat_model", "your_key", "offline-placeholder"}
 

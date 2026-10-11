@@ -81,7 +81,7 @@ st.caption("从游戏设计资料中查找依据，讨论机制、数值、经�
 
 with st.sidebar:
     mode = st.radio("使用方式", ["对话助手", "离线检索演示"], index=1)
-    st.caption("本地单用户应用。对话会调用已配置的聊天模型；离线演示只检索本机资料。")
+    st.caption("离线检索无需 API，不生成 AI 回答。对话助手调用远程聊天服务，可能产生 API 费用。")
     if mode == "对话助手":
         if st.button("新建会话", use_container_width=True):
             new_chat()

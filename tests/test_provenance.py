@@ -141,14 +141,15 @@ def test_successful_repair_replaces_closed_index_and_updates_annotations(tmp_pat
 def test_public_corpus_contains_repaired_metadata_without_placeholders():
     from scripts.repair_corpus_metadata import CORPUS, read_jsonl
     chunks = [c for path in CORPUS for c in read_jsonl(path)]
-    assert len({c["chunk_id"] for c in chunks}) == len(chunks) == 6515
+    assert len({c["chunk_id"] for c in chunks}) == len(chunks) == 5285
+    assert {c["source_collection"] for c in chunks} == {"game_design_wiki", "open_game_mechanics_dataset", "game_num_basics", "senior_game_designer"}
     for chunk in chunks:
         provenance = chunk["provenance"]
         assert len(provenance["revision"]) == 40 and len(provenance["source_sha256"]) == 64
         assert chunk["source_url"].startswith("https://github.com/")
         assert provenance["revision"] in chunk["source_url"]
         assert 0 < chunk["start_line"] <= chunk["end_line"]
-        assert chunk["license"] in {"MIT", "CC0-1.0", None}
+        assert chunk["license"] in {"MIT", "CC0-1.0"}
         assert provenance["line_scope"] in {"matched_text", "json_record", "document"}
         if chunk["license"] is None:
             assert provenance["license"]["status"] == "not_declared"

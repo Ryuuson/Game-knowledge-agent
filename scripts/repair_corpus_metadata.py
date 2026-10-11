@@ -123,12 +123,15 @@ def verify_license(snapshot, expected, evidence_path):
 
 def plan_repair(corpus_groups, *, knowledge_root, verified_at):
     snapshots, licenses = {}, {}
+    used_collections = {chunk["source_collection"] for group in corpus_groups for chunk in group}
     for collection, (repository, directory, license_name, evidence) in SOURCES.items():
+        if collection not in used_collections:
+            continue
         snapshot = Snapshot(knowledge_root / directory, repository)
         snapshots[collection] = snapshot
         licenses[collection] = verify_license(snapshot, license_name, evidence)
-    base = snapshots["game_knowledge_base"]
-    search, _ = base.read("docs/search-index.json")
+    base = snapshots.get("game_knowledge_base")
+    search = base.read("docs/search-index.json")[0] if base else '{"entries": []}'
     articles, parsed_html = {}, {}
     def parse_html(path):
         if path not in parsed_html:

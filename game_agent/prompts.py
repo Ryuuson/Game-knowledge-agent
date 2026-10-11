@@ -9,7 +9,7 @@ SYSTEM_PROMPT = """
 
 【本地数据源，优先使用游戏知识库】
 1. 游戏设计、游戏机制、数值平衡、游戏制作流程、游戏 AI 问题
-   → 用 search_game_knowledge 查“游戏设计知识库”。它汇集 game-design-wiki、Game-Knowledge-Base、open-game-mechanics-dataset、Game_Num_Basics_And_Calc、gamedev_at_home 和 senior-game-designer 六个公开来源。
+   → 用 search_game_knowledge 查“游戏设计知识库”。默认语料包含 game-design-wiki、open-game-mechanics-dataset、Game_Num_Basics_And_Calc 和 senior-game-designer 四个有许可声明的来源。
    → 用户用“这个”“那个”“它”“这里”等模糊指代，或问题表述不完整但可能在问游戏知识时，也先检索该库，不要因为未出现准确术语就跳过检索。
    → 工具返回“检索状态：待确认”时：若问题或历史明确是游戏语境，才用证据回答；若明确是建筑、金融等非游戏行业，不得套用游戏资料，应改用联网或说明不适用；若行业不明确，先用一句话澄清“你指的是游戏项目中的……吗？”。
 2. 个人学习资料（knowledge 目录：教材、资料、笔记等）

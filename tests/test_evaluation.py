@@ -242,7 +242,7 @@ def test_project_dataset_coverage_and_annotations(tmp_path):
     assert 30 <= len(cases) <= 50
     assert len([c for c in cases if not c["expected_chunk_ids"]]) >= 8
     counts = Counter(s for c in cases for s in c["source_collections"])
-    assert len(counts) == 6 and min(counts.values()) >= 5
+    assert len(counts) == 4 and min(counts.values()) >= 5
     index_path = evaluation.DEFAULT_INDEX
     if not index_path.is_file():
         # Clean clones do not contain private generated indexes or model weights.
