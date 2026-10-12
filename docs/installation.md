@@ -56,6 +56,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run UI.py --server.address 127.0.0.1 --server.port 8502
+```
+
+## 环境诊断
+
+在项目根目录运行以下命令，检查环境、配置和语料状态。应用运行期间可在另一个终端执行。
+
+```powershell
 .\.venv\Scripts\python.exe -X utf8 scripts/doctor.py --json
 ```
 
